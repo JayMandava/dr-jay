@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Stethoscope draped over the coat collar -->
+  <g fill="none" stroke="#CBD5E1" stroke-width="20" stroke-linecap="round">
+    <path d="M 400 840 C 370 900 390 950 460 968"/>
+    <path d="M 624 840 C 654 900 634 950 564 968"/>
+  </g>
+  <circle cx="512" cy="978" r="34" fill="#CBD5E1"/>
+</svg>

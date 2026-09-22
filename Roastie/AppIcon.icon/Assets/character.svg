@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <clipPath id="faceClip">
+      <circle cx="512" cy="560" r="284"/>
+    </clipPath>
+  </defs>
+
+  <!-- Coat collar -->
+  <path d="M 300 860 L 512 760 L 724 860 L 724 1024 L 300 1024 Z" fill="#F8FAFC"/>
+  <path d="M 512 760 L 420 900 L 512 860 L 604 900 Z" fill="#E2E8F0"/>
+
+  <!-- Neck -->
+  <rect x="466" y="740" width="92" height="90" rx="30" fill="#D99C73"/>
+
+  <!-- Ears -->
+  <circle cx="234" cy="560" r="46" fill="#E5AC80"/>
+  <circle cx="790" cy="560" r="46" fill="#E5AC80"/>
+
+  <!-- Face -->
+  <circle cx="512" cy="560" r="284" fill="#E5AC80"/>
+
+  <!-- Stubble shading (clipped to face) — a few days unshaven -->
+  <g clip-path="url(#faceClip)" fill="#B87F59" opacity="0.4">
+    <ellipse cx="512" cy="695" rx="232" ry="145"/>
+  </g>
+  <g clip-path="url(#faceClip)" fill="#7A4E30" opacity="0.5">
+    <circle cx="404" cy="642" r="4"/><circle cx="434" cy="666" r="4"/><circle cx="464" cy="686" r="4"/>
+    <circle cx="494" cy="698" r="4"/><circle cx="512" cy="702" r="4"/><circle cx="530" cy="698" r="4"/>
+    <circle cx="560" cy="686" r="4"/><circle cx="590" cy="666" r="4"/><circle cx="620" cy="642" r="4"/>
+    <circle cx="372" cy="614" r="4"/><circle cx="652" cy="614" r="4"/>
+    <circle cx="392" cy="670" r="4"/><circle cx="632" cy="670" r="4"/>
+    <circle cx="424" cy="714" r="4"/><circle cx="600" cy="714" r="4"/>
+    <circle cx="460" cy="732" r="4"/><circle cx="564" cy="732" r="4"/>
+    <circle cx="512" cy="738" r="4"/>
+  </g>
+
+  <!-- Hair -->
+  <path d="M 232 540
+           C 220 380 340 268 512 268
+           C 684 268 804 380 792 540
+           C 760 460 690 420 512 420
+           C 334 420 264 460 232 540 Z" fill="#33241B"/>
+  <!-- flecks of grey -->
+  <path d="M 400 300 C 420 320 430 340 424 360" stroke="#6B5645" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M 600 300 C 590 320 596 340 610 358" stroke="#6B5645" stroke-width="8" fill="none" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Eyebrows: both furrowed down toward center — a scowl, not a shrug -->
+  <path d="M 366 478 C 396 452 440 448 478 464" stroke="#2B1E16" stroke-width="28" fill="none" stroke-linecap="round"/>
+  <path d="M 546 464 C 584 448 628 452 658 478" stroke="#2B1E16" stroke-width="28" fill="none" stroke-linecap="round"/>
+  <!-- Furrow crease between the brows -->
+  <path d="M 498 470 C 502 482 502 492 498 502" stroke="#8A5A38" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Eyes: both narrowed, ice-blue, unimpressed with everyone in the room -->
+  <g>
+    <ellipse cx="436" cy="522" rx="30" ry="13" fill="#F8FAFC"/>
+    <circle cx="440" cy="522" r="13" fill="#8FB7D6"/>
+    <circle cx="440" cy="522" r="6" fill="#1B2733"/>
+    <path d="M 402 516 C 416 504 456 504 470 516" fill="#E5AC80"/>
+    <path d="M 406 534 C 420 540 452 540 466 534" stroke="#B87F59" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.5"/>
+
+    <ellipse cx="592" cy="522" rx="30" ry="13" fill="#F8FAFC"/>
+    <circle cx="588" cy="522" r="13" fill="#8FB7D6"/>
+    <circle cx="588" cy="522" r="6" fill="#1B2733"/>
+    <path d="M 558 516 C 572 504 612 504 626 516" fill="#E5AC80"/>
+    <path d="M 562 534 C 576 540 608 540 622 534" stroke="#B87F59" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.5"/>
+  </g>
+
+  <!-- Nose -->
+  <path d="M 500 540 C 494 570 486 592 472 606 C 486 616 504 616 516 608"
+        stroke="#B87F59" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Sardonic smirk: thin closed line, flat on the left, pulled up hard on
+       the right — the "I already know the diagnosis and you're an idiot" look -->
+  <path d="M 446 666 C 490 680 546 678 590 640" stroke="#5C3223" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <!-- Smirk crease at the raised corner -->
+  <path d="M 598 620 C 608 628 610 640 602 652" stroke="#8A5A38" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.55"/>
+</svg>
