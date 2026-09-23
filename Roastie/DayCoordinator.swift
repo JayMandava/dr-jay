@@ -18,19 +18,31 @@ final class DayCoordinator {
         self.context = ModelContext(PersistenceController.modelContainer)
     }
 
+    private func saveContext(operation: String) {
+        do {
+            try context.save()
+        } catch {
+            AppLogger.report(error, operation: operation, logger: AppLogger.persistence)
+        }
+    }
+
     // MARK: - Today
 
     @discardableResult
     func todayLog() -> DailyLog {
         let key = Date().dayKey
         let descriptor = FetchDescriptor<DailyLog>(predicate: #Predicate { $0.dayKey == key })
-        if let existing = try? context.fetch(descriptor).first {
-            return existing
+        do {
+            if let existing = try context.fetch(descriptor).first {
+                return existing
+            }
+        } catch {
+            AppLogger.report(error, operation: "Fetch today's log", logger: AppLogger.persistence)
         }
         let settings = SharedStore.loadSettings()
         let log = DailyLog(dayKey: key, date: Date().startOfDay, waterGoalBottles: settings.waterGoalBottles)
         context.insert(log)
-        try? context.save()
+        saveContext(operation: "Create today's log")
         return log
     }
 
@@ -44,7 +56,7 @@ final class DayCoordinator {
         let log = todayLog()
         guard log.waterGoalBottles != goal else { return }
         log.waterGoalBottles = goal
-        try? context.save()
+        saveContext(operation: "Save water goal change")
 
         let settings = SharedStore.loadSettings()
         await pushSnapshot(log: log, settings: settings)
@@ -65,7 +77,7 @@ final class DayCoordinator {
         // goal change always shows up, even without revisiting Settings.
         if log.waterGoalBottles != settings.waterGoalBottles {
             log.waterGoalBottles = settings.waterGoalBottles
-            try? context.save()
+            saveContext(operation: "Reconcile today's water goal")
         }
 
         // A manual entry is an explicit choice for today's total. Once made,
@@ -74,10 +86,14 @@ final class DayCoordinator {
         if settings.healthKitEnabled,
            HealthKitManager.shared.isAvailable,
            log.sleepSource != "manual" {
-            if let hours = try? await HealthKitManager.shared.sleepHoursLastNight() {
-                log.sleepHours = hours
-                log.sleepSource = "healthkit"
-                try? context.save()
+            do {
+                if let hours = try await HealthKitManager.shared.sleepHoursLastNight() {
+                    log.sleepHours = hours
+                    log.sleepSource = "healthkit"
+                    saveContext(operation: "Save Health sleep data")
+                }
+            } catch {
+                AppLogger.report(error, operation: "Read Health sleep data", logger: AppLogger.health)
             }
         }
 
@@ -92,7 +108,7 @@ final class DayCoordinator {
         let log = todayLog()
         log.waterBottlesLogged += 1
         log.waterTimestamps.append(.now)
-        try? context.save()
+        saveContext(operation: "Log water bottle")
 
         let settings = SharedStore.loadSettings()
         let window = currentWindow(settings: settings)
@@ -113,7 +129,7 @@ final class DayCoordinator {
         let total = (log.sleepHours ?? 0) + additionalHours
         log.sleepHours = total
         log.sleepSource = "manual"
-        try? context.save()
+        saveContext(operation: "Log manual sleep")
 
         let settings = SharedStore.loadSettings()
         let window = currentWindow(settings: settings)
@@ -129,14 +145,23 @@ final class DayCoordinator {
     /// HealthKit value. Returns false when HealthKit has no sleep data to use.
     @discardableResult
     func replaceSleepWithHealthData() async -> Bool {
-        guard HealthKitManager.shared.isAvailable,
-              let hours = try? await HealthKitManager.shared.sleepHoursLastNight()
-        else { return false }
+        guard HealthKitManager.shared.isAvailable else { return false }
+
+        let hours: Double
+        do {
+            guard let healthHours = try await HealthKitManager.shared.sleepHoursLastNight() else {
+                return false
+            }
+            hours = healthHours
+        } catch {
+            AppLogger.report(error, operation: "Replace sleep with Health data", logger: AppLogger.health)
+            return false
+        }
 
         let log = todayLog()
         log.sleepHours = hours
         log.sleepSource = "healthkit"
-        try? context.save()
+        saveContext(operation: "Replace sleep with Health data")
 
         let settings = SharedStore.loadSettings()
         await pushSnapshot(log: log, settings: settings)
@@ -152,7 +177,7 @@ final class DayCoordinator {
         if log.sleepSource != "healthkit" {
             log.sleepHours = met ? AppConfig.sleepGoalHours : max(0, AppConfig.sleepGoalHours - 2)
             log.sleepSource = "manual"
-            try? context.save()
+            saveContext(operation: "Save sleep self-report")
         }
 
         let settings = SharedStore.loadSettings()
@@ -178,15 +203,21 @@ final class DayCoordinator {
             window: window, kind: kind, timestamp: .now, met: met,
             message: message.text, wasGeneratedByModel: true
         ))
-        try? self.context.save()
+        saveContext(operation: "Save check-in message")
         return message
     }
 
     // MARK: - Streak
 
     func streak() -> Int {
-        guard let logs = try? context.fetch(FetchDescriptor<DailyLog>()) else { return 0 }
-        return StreakCalculator.calculate(logs: logs).current
+        do {
+            return StreakCalculator.calculate(
+                logs: try context.fetch(FetchDescriptor<DailyLog>())
+            ).current
+        } catch {
+            AppLogger.report(error, operation: "Calculate streak", logger: AppLogger.persistence)
+            return 0
+        }
     }
 
     // MARK: - Reset
@@ -195,9 +226,12 @@ final class DayCoordinator {
     /// snapshot, settings, pending notifications, and any running Live
     /// Activity. Used by the "Reset App Data" action in Settings.
     func resetAllData() async {
-        if let logs = try? context.fetch(FetchDescriptor<DailyLog>()) {
+        do {
+            let logs = try context.fetch(FetchDescriptor<DailyLog>())
             for log in logs { context.delete(log) }
-            try? context.save()
+            try context.save()
+        } catch {
+            AppLogger.report(error, operation: "Reset stored logs", logger: AppLogger.persistence)
         }
 
         AppConfig.sharedDefaults.removeObject(forKey: AppConfig.DefaultsKey.snapshot)
@@ -211,7 +245,13 @@ final class DayCoordinator {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
 
-        try? FileManager.default.removeItem(at: BackupManager.fileURL)
+        do {
+            try FileManager.default.removeItem(at: BackupManager.fileURL)
+        } catch {
+            if (error as NSError).code != NSFileNoSuchFileError {
+                AppLogger.report(error, operation: "Remove backup during reset", logger: AppLogger.backup)
+            }
+        }
 
         WidgetCenter.shared.reloadAllTimelines()
     }
@@ -222,12 +262,18 @@ final class DayCoordinator {
     /// Called after every mutation so the file is never more than one write
     /// stale — this is what "Export" in Settings shares, and what a future
     /// reinstall's "Import" restores from.
-    func writeBackupNow() {
-        guard let logs = try? context.fetch(FetchDescriptor<DailyLog>()) else { return }
-        BackupManager.write(logs)
+    func writeBackupNow() throws {
+        let logs = try context.fetch(FetchDescriptor<DailyLog>())
+        try BackupManager.write(logs)
     }
 
-    private func persistBackup() { writeBackupNow() }
+    private func persistBackup() {
+        do {
+            try writeBackupNow()
+        } catch {
+            AppLogger.report(error, operation: "Persist automatic backup", logger: AppLogger.backup)
+        }
+    }
 
     /// Merges a backup payload into the current store: each imported day
     /// overwrites the matching local day (by `dayKey`) if one exists, or is
@@ -240,22 +286,16 @@ final class DayCoordinator {
         for entry in payload.logs {
             let key = entry.dayKey
             let descriptor = FetchDescriptor<DailyLog>(predicate: #Predicate { $0.dayKey == key })
-            let log = (try? context.fetch(descriptor).first) ?? {
+            let log = try context.fetch(descriptor).first ?? {
                 let new = DailyLog(dayKey: entry.dayKey, date: entry.date, waterGoalBottles: entry.waterGoalBottles)
                 context.insert(new)
                 return new
             }()
 
-            log.date = entry.date
-            log.sleepHours = entry.sleepHours
-            log.sleepSource = entry.sleepSource
-            log.waterGoalBottles = entry.waterGoalBottles
-            log.waterBottlesLogged = entry.waterBottlesLogged
-            log.waterTimestamps = entry.waterTimestamps
-            log.checkIns = entry.checkIns
+            BackupManager.restore(entry, into: log)
         }
 
-        try? context.save()
+        try context.save()
         await refreshToday()
         return payload.logs.count
     }
@@ -263,25 +303,7 @@ final class DayCoordinator {
     // MARK: - Snapshot / Live Activity plumbing
 
     private func currentWindow(settings: AppSettings) -> CheckInWindow {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: .now)
-        let currentMinutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
-
-        return CheckInWindow.allCases.min { lhs, rhs in
-            let lhsHour = settings.checkInHours[lhs] ?? lhs.defaultHour
-            let rhsHour = settings.checkInHours[rhs] ?? rhs.defaultHour
-            let lhsDistance = circularMinuteDistance(from: currentMinutes, to: lhsHour * 60)
-            let rhsDistance = circularMinuteDistance(from: currentMinutes, to: rhsHour * 60)
-
-            if lhsDistance == rhsDistance {
-                return lhsHour < rhsHour
-            }
-            return lhsDistance < rhsDistance
-        } ?? .morning
-    }
-
-    private func circularMinuteDistance(from start: Int, to end: Int) -> Int {
-        let directDistance = abs(start - end)
-        return min(directDistance, 24 * 60 - directDistance)
+        CheckInWindowResolver.closest(to: .now, settings: settings)
     }
 
     /// Sleep/water messages are derived straight from today's `checkIns` —
@@ -361,10 +383,14 @@ final class DayCoordinator {
             await activity.end(content, dismissalPolicy: .immediate)
         }
 
-        _ = try? Activity<RoastieActivityAttributes>.request(
-            attributes: RoastieActivityAttributes(startedDayKey: dayKey),
-            content: content,
-            pushType: nil
-        )
+        do {
+            _ = try Activity<RoastieActivityAttributes>.request(
+                attributes: RoastieActivityAttributes(startedDayKey: dayKey),
+                content: content,
+                pushType: nil
+            )
+        } catch {
+            AppLogger.report(error, operation: "Start Live Activity", logger: AppLogger.activity)
+        }
     }
 }

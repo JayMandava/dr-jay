@@ -20,7 +20,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         request.requiresNetworkConnectivity = false
         request.requiresExternalPower = false
         request.earliestBeginDate = Calendar.current.date(bySettingHour: 5, minute: 0, second: 0, of: .now.addingTimeInterval(86400))
-        try? BGTaskScheduler.shared.submit(request)
+        do {
+            try BGTaskScheduler.shared.submit(request)
+        } catch {
+            AppLogger.report(error, operation: "Schedule daily background refresh", logger: AppLogger.background)
+        }
     }
 
     private func handleDailyRefresh(task: BGProcessingTask) {

@@ -12,7 +12,18 @@ enum BackupManager {
     private static let fileName = "dr-jay-backup.json"
     private static let currentVersion = 1
 
-    struct DailyLogExport: Codable {
+    enum BackupError: LocalizedError {
+        case unsupportedVersion(Int)
+
+        var errorDescription: String? {
+            switch self {
+            case .unsupportedVersion(let version):
+                "This backup uses unsupported format version \(version)."
+            }
+        }
+    }
+
+    struct DailyLogExport: Codable, Equatable {
         var dayKey: String
         var date: Date
         var sleepHours: Double?
@@ -23,7 +34,7 @@ enum BackupManager {
         var checkIns: [CheckInRecord]
     }
 
-    struct BackupPayload: Codable {
+    struct BackupPayload: Codable, Equatable {
         var version: Int
         var exportedAt: Date
         var logs: [DailyLogExport]
@@ -37,7 +48,7 @@ enum BackupManager {
 
     /// Rewrites the backup file from the current set of logs. Cheap enough
     /// for a personal app's data volume to just do a full rewrite each time.
-    static func write(_ logs: [DailyLog]) {
+    static func write(_ logs: [DailyLog], to url: URL = fileURL) throws {
         let payload = BackupPayload(
             version: currentVersion,
             exportedAt: .now,
@@ -57,14 +68,28 @@ enum BackupManager {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        guard let data = try? encoder.encode(payload) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+        let data = try encoder.encode(payload)
+        try data.write(to: url, options: .atomic)
     }
 
     static func read(from url: URL) throws -> BackupPayload {
         let data = try Data(contentsOf: url)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(BackupPayload.self, from: data)
+        let payload = try decoder.decode(BackupPayload.self, from: data)
+        guard payload.version <= currentVersion else {
+            throw BackupError.unsupportedVersion(payload.version)
+        }
+        return payload
+    }
+
+    static func restore(_ entry: DailyLogExport, into log: DailyLog) {
+        log.date = entry.date
+        log.sleepHours = entry.sleepHours
+        log.sleepSource = entry.sleepSource
+        log.waterGoalBottles = entry.waterGoalBottles
+        log.waterBottlesLogged = entry.waterBottlesLogged
+        log.waterTimestamps = entry.waterTimestamps
+        log.checkIns = entry.checkIns
     }
 }

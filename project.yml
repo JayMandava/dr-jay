@@ -83,6 +83,18 @@ targets:
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
 
+  RoastieTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: RoastieTests
+    dependencies:
+      - target: Roastie
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.jeyanth.roastie.tests
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   Roastie:
     build:
@@ -91,5 +103,9 @@ schemes:
         RoastieWidgets: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - RoastieTests
     archive:
       config: Release

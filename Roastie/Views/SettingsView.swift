@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
 struct SettingsView: View {
     @Binding var settings: AppSettings
@@ -8,6 +9,8 @@ struct SettingsView: View {
     @State private var showResetConfirmation = false
     @State private var isResetting = false
     @State private var showImporter = false
+    @State private var showShareSheet = false
+    @State private var backupError: String?
     @State private var importResultMessage: String?
     @State private var isImporting = false
 
@@ -78,12 +81,18 @@ struct SettingsView: View {
                         .foregroundStyle(daysRemaining <= 2 ? .orange : .secondary)
                     }
 
-                    ShareLink(item: BackupManager.fileURL) {
+                    Button {
+                        do {
+                            try DayCoordinator.shared.writeBackupNow()
+                            backupError = nil
+                            showShareSheet = true
+                        } catch {
+                            AppLogger.report(error, operation: "Prepare backup export", logger: AppLogger.backup)
+                            backupError = "Export failed: \(error.localizedDescription)"
+                        }
+                    } label: {
                         Label("Export Backup", systemImage: "square.and.arrow.up")
                     }
-                    .simultaneousGesture(TapGesture().onEnded {
-                        DayCoordinator.shared.writeBackupNow()
-                    })
 
                     Button {
                         showImporter = true
@@ -100,6 +109,12 @@ struct SettingsView: View {
                         Text(importResultMessage)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    }
+
+                    if let backupError {
+                        Text(backupError)
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
                 } header: {
                     Text("Data")
@@ -160,6 +175,9 @@ struct SettingsView: View {
                     importResultMessage = "Import failed: \(error.localizedDescription)"
                 }
             }
+            .sheet(isPresented: $showShareSheet) {
+                ActivityShareSheet(items: [BackupManager.fileURL])
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -186,4 +204,14 @@ struct SettingsView: View {
         let date = Calendar.current.date(from: components) ?? .now
         return date.formatted(date: .omitted, time: .shortened)
     }
+}
+
+private struct ActivityShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

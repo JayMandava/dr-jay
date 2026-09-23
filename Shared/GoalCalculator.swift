@@ -1,6 +1,6 @@
 import Foundation
 
-enum SleepStatus {
+enum SleepStatus: Equatable {
     case noData
     case under   // below the minimum
     case inRange // healthy window

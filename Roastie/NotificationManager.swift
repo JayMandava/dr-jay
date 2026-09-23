@@ -31,7 +31,12 @@ enum NotificationManager {
     }
 
     static func requestAuthorization() async -> Bool {
-        (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+        do {
+            return try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
+        } catch {
+            AppLogger.report(error, operation: "Request notification authorization", logger: AppLogger.notifications)
+            return false
+        }
     }
 
     /// Cancels and reschedules all 6 repeating daily check-ins, plus the
@@ -92,7 +97,11 @@ enum NotificationManager {
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         let request = UNNotificationRequest(identifier: "backup.expiry.reminder", content: content, trigger: trigger)
-        try? await UNUserNotificationCenter.current().add(request)
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+        } catch {
+            AppLogger.report(error, operation: "Schedule backup reminder", logger: AppLogger.notifications)
+        }
     }
 
     private static func schedule(
@@ -120,7 +129,15 @@ enum NotificationManager {
 
         let identifier = "\(kind.rawValue).\(window.rawValue)"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
-        try? await UNUserNotificationCenter.current().add(request)
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+        } catch {
+            AppLogger.report(
+                error,
+                operation: "Schedule \(window.rawValue) \(kind.rawValue) notification",
+                logger: AppLogger.notifications
+            )
+        }
     }
 
     private static func statusBody(kind: CheckKind, settings: AppSettings, snapshot: TodaySnapshot?) -> String {
