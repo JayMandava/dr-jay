@@ -80,7 +80,7 @@ struct OnboardingView: View {
         switch step {
         case 0: "Dr Jay keeps you honest about sleep and water — with an on-device AI that hypes you up when you win and roasts you when you don't."
         case 1: "Every morning, afternoon, and night, Dr Jay checks if you've hit your sleep window. Miss it, and you'll hear about it."
-        case 2: "Log a bottle every time you finish one. Fall behind pace and the roast comes for you."
+        case 2: "Log a bottle every time you finish one. Dr Jay keeps checking until you hit the full daily goal."
         default: "Allow notifications so Dr Jay can actually check in on you."
         }
     }
