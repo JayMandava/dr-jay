@@ -68,7 +68,12 @@ final class DayCoordinator {
             try? context.save()
         }
 
-        if settings.healthKitEnabled, HealthKitManager.shared.isAvailable {
+        // A manual entry is an explicit choice for today's total. Once made,
+        // foreground refreshes leave it alone unless the user explicitly
+        // chooses "Replace with Health Data" from the sleep sheet.
+        if settings.healthKitEnabled,
+           HealthKitManager.shared.isAvailable,
+           log.sleepSource != "manual" {
             if let hours = try? await HealthKitManager.shared.sleepHoursLastNight() {
                 log.sleepHours = hours
                 log.sleepSource = "healthkit"
@@ -100,9 +105,9 @@ final class DayCoordinator {
     }
 
     /// Free-form manual sleep entry — logged any time, same as water, not
-    /// gated to a check-in window. `hours` overwrites whatever HealthKit or a
-    /// prior manual entry set for today. Additive, like water: each call adds
-    /// to today's running total instead of replacing it.
+    /// gated to a check-in window. Additive, like water: each call adds to
+    /// today's running total and makes manual data authoritative for the rest
+    /// of the day.
     func logSleepHours(_ additionalHours: Double) async {
         let log = todayLog()
         let total = (log.sleepHours ?? 0) + additionalHours
@@ -118,6 +123,26 @@ final class DayCoordinator {
         await pushSnapshot(log: log, settings: settings)
         await syncLiveActivity(log: log)
         persistBackup()
+    }
+
+    /// Explicitly discards today's manual total in favor of the latest
+    /// HealthKit value. Returns false when HealthKit has no sleep data to use.
+    @discardableResult
+    func replaceSleepWithHealthData() async -> Bool {
+        guard HealthKitManager.shared.isAvailable,
+              let hours = try? await HealthKitManager.shared.sleepHoursLastNight()
+        else { return false }
+
+        let log = todayLog()
+        log.sleepHours = hours
+        log.sleepSource = "healthkit"
+        try? context.save()
+
+        let settings = SharedStore.loadSettings()
+        await pushSnapshot(log: log, settings: settings)
+        await syncLiveActivity(log: log)
+        persistBackup()
+        return true
     }
 
     /// Quick Yes/No from a notification action — coarser than `logSleepHours`

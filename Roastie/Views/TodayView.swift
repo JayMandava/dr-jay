@@ -21,7 +21,7 @@ struct TodayView: View {
                             color: .indigo,
                             icon: "moon.zzz.fill",
                             title: "Sleep",
-                            subtitle: GoalCalculator.sleepDetail(hours: today?.sleepHours)
+                            subtitle: sleepSubtitle
                         )
                         RingView(
                             progress: today?.waterProgress ?? 0,
@@ -116,9 +116,16 @@ struct TodayView: View {
                 SettingsView(settings: $settings)
             }
             .sheet(isPresented: $showSleepSheet) {
-                LogSleepSheet(currentTotal: today?.sleepHours) { hours in
-                    Task { await DayCoordinator.shared.logSleepHours(hours) }
-                }
+                LogSleepSheet(
+                    currentTotal: today?.sleepHours,
+                    healthKitEnabled: settings.healthKitEnabled,
+                    onSave: { hours in
+                        Task { await DayCoordinator.shared.logSleepHours(hours) }
+                    },
+                    onReplaceWithHealth: {
+                        await DayCoordinator.shared.replaceSleepWithHealthData()
+                    }
+                )
             }
             .task {
                 await DayCoordinator.shared.refreshToday()
@@ -130,6 +137,15 @@ struct TodayView: View {
         streakStats.current > 0
             ? "\(streakStats.current)-day streak"
             : "Start a streak today"
+    }
+
+    private var sleepSubtitle: String {
+        let detail = GoalCalculator.sleepDetail(hours: today?.sleepHours)
+        switch today?.sleepSource {
+        case "healthkit": return "\(detail) · Health"
+        case "manual": return "\(detail) · Manual"
+        default: return detail
+        }
     }
 }
 
