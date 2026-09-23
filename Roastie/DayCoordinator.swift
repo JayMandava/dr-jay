@@ -160,16 +160,8 @@ final class DayCoordinator {
     // MARK: - Streak
 
     func streak() -> Int {
-        var descriptor = FetchDescriptor<DailyLog>(sortBy: [SortDescriptor(\.date, order: .reverse)])
-        descriptor.fetchLimit = 60
-        guard let logs = try? context.fetch(descriptor) else { return 0 }
-
-        var count = 0
-        for log in logs {
-            guard log.sleepGoalMet == true, log.waterProgress >= 1 else { break }
-            count += 1
-        }
-        return count
+        guard let logs = try? context.fetch(FetchDescriptor<DailyLog>()) else { return 0 }
+        return StreakCalculator.calculate(logs: logs).current
     }
 
     // MARK: - Reset

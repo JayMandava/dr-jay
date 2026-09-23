@@ -4,21 +4,52 @@ import SwiftData
 struct HistoryView: View {
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
 
+    private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
+
     var body: some View {
-        List(logs) { log in
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(log.date.formatted(date: .abbreviated, time: .omitted))
-                        .font(.subheadline.weight(.semibold))
-                    Text("\(GoalCalculator.sleepDetail(hours: log.sleepHours)) · \(GoalCalculator.waterDetail(bottlesLogged: log.waterBottlesLogged, goal: log.waterGoalBottles))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        List {
+            Section("Consistency") {
+                HStack(spacing: 0) {
+                    metric(value: streakStats.current, label: "Current")
+                    Divider()
+                    metric(value: streakStats.longest, label: "Longest")
+                    Divider()
+                    metric(value: streakStats.perfectDays, label: "Perfect days")
                 }
-                Spacer()
-                statusIcon(log)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+
+            Section("Daily history") {
+                ForEach(logs) { log in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(log.date.formatted(date: .abbreviated, time: .omitted))
+                                .font(.subheadline.weight(.semibold))
+                            Text("\(GoalCalculator.sleepDetail(hours: log.sleepHours)) · \(GoalCalculator.waterDetail(bottlesLogged: log.waterBottlesLogged, goal: log.waterGoalBottles))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        statusIcon(log)
+                    }
+                }
             }
         }
         .navigationTitle("History")
+    }
+
+    private func metric(value: Int, label: String) -> some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.title2.bold())
+                .monospacedDigit()
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 
     private func statusIcon(_ log: DailyLog) -> some View {

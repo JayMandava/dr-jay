@@ -9,6 +9,7 @@ struct TodayView: View {
     @State private var isLoggingWater = false
 
     private var today: DailyLog? { logs.first { $0.dayKey == Date().dayKey } }
+    private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
 
     var body: some View {
         NavigationStack {
@@ -76,12 +77,24 @@ struct TodayView: View {
                     }
                     .font(.subheadline.weight(.semibold))
 
-                    let streak = DayCoordinator.shared.streak()
-                    if streak > 0 {
-                        Label("\(streak)-day streak", systemImage: "flame.fill")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.orange)
+                    NavigationLink {
+                        HistoryView()
+                    } label: {
+                        HStack {
+                            Label(currentStreakLabel, systemImage: "flame.fill")
+                                .foregroundStyle(.orange)
+                            Spacer()
+                            Text("Best \(streakStats.longest)")
+                                .foregroundStyle(.secondary)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .padding(14)
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
                     }
+                    .buttonStyle(.plain)
 
                     if let today, !today.checkIns.isEmpty {
                         CheckInTimeline(checkIns: today.checkIns.sorted { $0.timestamp > $1.timestamp })
@@ -119,6 +132,12 @@ struct TodayView: View {
                 await DayCoordinator.shared.refreshToday()
             }
         }
+    }
+
+    private var currentStreakLabel: String {
+        streakStats.current > 0
+            ? "\(streakStats.current)-day streak"
+            : "Start a streak today"
     }
 }
 
