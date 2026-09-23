@@ -51,6 +51,29 @@ struct CheckInRecord: Codable, Hashable, Identifiable, Sendable {
     var wasGeneratedByModel: Bool
 }
 
+enum FoodVerdict: String, Codable, Hashable, Sendable {
+    case healthy
+    case unhealthy
+    case unanalyzed
+
+    var label: String {
+        switch self {
+        case .healthy: "Healthy"
+        case .unhealthy: "Unhealthy"
+        case .unanalyzed: "Couldn’t analyse"
+        }
+    }
+}
+
+struct FoodEntry: Codable, Hashable, Identifiable, Sendable {
+    var id: UUID = UUID()
+    var text: String
+    var timestamp: Date
+    var verdict: FoodVerdict
+    var assessment: String?
+    var roast: String?
+}
+
 /// One row per calendar day. Source of truth for history/streaks; lives only
 /// in the main app's SwiftData store (widgets/extension read `TodaySnapshot` instead).
 @Model
@@ -63,6 +86,9 @@ final class DailyLog {
     var waterBottlesLogged: Int
     var waterTimestamps: [Date]
     var checkIns: [CheckInRecord]
+    /// Optional so existing SwiftData stores migrate without needing a value
+    /// synthesized for rows written before food tracking existed.
+    var foodEntries: [FoodEntry]?
 
     init(dayKey: String, date: Date, waterGoalBottles: Int) {
         self.dayKey = dayKey
@@ -73,6 +99,7 @@ final class DailyLog {
         self.waterBottlesLogged = 0
         self.waterTimestamps = []
         self.checkIns = []
+        self.foodEntries = []
     }
 
     var sleepGoalMet: Bool? {

@@ -6,10 +6,16 @@ struct TodayView: View {
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
     @State private var showSettings = false
     @State private var showSleepSheet = false
+    @State private var showFoodSheet = false
     @State private var isLoggingWater = false
+    @State private var loggedFoodResult: FoodEntry?
+    @State private var foodFeedback: FoodFeedback?
 
     private var today: DailyLog? { logs.first { $0.dayKey == Date().dayKey } }
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
+    private var foodEntries: [FoodEntry] {
+        (today?.foodEntries ?? []).sorted { $0.timestamp > $1.timestamp }
+    }
 
     var body: some View {
         NavigationStack {
@@ -77,6 +83,45 @@ struct TodayView: View {
                     }
                     .font(.subheadline.weight(.semibold))
 
+                    Button {
+                        Haptics.tap()
+                        showFoodSheet = true
+                    } label: {
+                        Label("Log Food", systemImage: "fork.knife")
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(PressableButtonStyle())
+                    .buttonBorderShape(.roundedRectangle(radius: 14))
+                    .background(.green.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
+                    .foregroundStyle(.green)
+                    .font(.subheadline.weight(.semibold))
+
+                    if !foodEntries.isEmpty {
+                        VStack(alignment: .leading, spacing: 14) {
+                            Label("Food today", systemImage: "fork.knife")
+                                .font(.headline)
+
+                            ForEach(foodEntries) { entry in
+                                FoodEntryRow(
+                                    entry: entry,
+                                    onMarkHealthy: {
+                                        updateFood(entry, verdict: .healthy)
+                                    },
+                                    onMarkUnhealthy: {
+                                        updateFood(entry, verdict: .unhealthy)
+                                    },
+                                    onDelete: {
+                                        deleteFood(entry)
+                                    }
+                                )
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                    }
+
                     HStack {
                         Label(currentStreakLabel, systemImage: "flame.fill")
                             .foregroundStyle(.orange)
@@ -127,6 +172,23 @@ struct TodayView: View {
                     }
                 )
             }
+            .sheet(isPresented: $showFoodSheet, onDismiss: presentFoodFeedback) {
+                LogFoodSheet(
+                    onSave: { description in
+                        await DayCoordinator.shared.logFood(description)
+                    },
+                    onLogged: { entry in
+                        loggedFoodResult = entry
+                    }
+                )
+            }
+            .alert(item: $foodFeedback) { feedback in
+                Alert(
+                    title: Text(feedback.title),
+                    message: Text(feedback.message),
+                    dismissButton: .default(Text("Noted"))
+                )
+            }
             .task {
                 await DayCoordinator.shared.refreshToday()
             }
@@ -147,6 +209,47 @@ struct TodayView: View {
         default: return detail
         }
     }
+
+    private func presentFoodFeedback() {
+        guard let entry = loggedFoodResult else { return }
+        loggedFoodResult = nil
+
+        switch entry.verdict {
+        case .unhealthy:
+            foodFeedback = FoodFeedback(
+                title: "Dr Jay’s diagnosis",
+                message: entry.roast ?? "The chart says unhealthy. Even without commentary, the evidence is unflattering."
+            )
+        case .unanalyzed:
+            foodFeedback = FoodFeedback(
+                title: "Food logged",
+                message: "Dr Jay couldn’t analyse this entry on this device. You can classify it from the food list."
+            )
+        case .healthy:
+            break
+        }
+    }
+
+    private func updateFood(_ entry: FoodEntry, verdict: FoodVerdict) {
+        DayCoordinator.shared.updateFoodVerdict(
+            entryID: entry.id,
+            dayKey: today?.dayKey ?? Date().dayKey,
+            verdict: verdict
+        )
+    }
+
+    private func deleteFood(_ entry: FoodEntry) {
+        DayCoordinator.shared.deleteFoodEntry(
+            entryID: entry.id,
+            dayKey: today?.dayKey ?? Date().dayKey
+        )
+    }
+}
+
+private struct FoodFeedback: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
 }
 
 /// Styled like a clinical chart note: a colored severity stripe, a small-caps

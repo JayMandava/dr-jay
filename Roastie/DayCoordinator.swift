@@ -141,6 +141,89 @@ final class DayCoordinator {
         persistBackup()
     }
 
+    /// Saves first, then asks the on-device model to assess the entry. If the
+    /// model is unavailable or fails, the food remains safely logged with an
+    /// explicit unanalyzed verdict.
+    @discardableResult
+    func logFood(_ description: String) async -> FoodEntry? {
+        let text = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+
+        let log = todayLog()
+        var entry = FoodEntry(
+            text: text,
+            timestamp: .now,
+            verdict: .unanalyzed,
+            assessment: nil,
+            roast: nil
+        )
+        var entries = log.foodEntries ?? []
+        entries.append(entry)
+        log.foodEntries = entries
+        saveContext(operation: "Log food entry")
+        persistBackup()
+
+        let settings = SharedStore.loadSettings()
+        guard let assessment = await FoodAnalyzer.analyze(text, intensity: settings.roastIntensity) else {
+            return entry
+        }
+
+        entry.verdict = assessment.verdict
+        entry.assessment = assessment.explanation
+        entry.roast = assessment.roast
+        replaceFoodEntry(entry, in: log)
+        saveContext(operation: "Save food assessment")
+        persistBackup()
+        return entry
+    }
+
+    func updateFoodVerdict(
+        entryID: UUID,
+        dayKey: String,
+        verdict: FoodVerdict
+    ) {
+        guard verdict != .unanalyzed,
+              let log = log(for: dayKey),
+              var entries = log.foodEntries,
+              let index = entries.firstIndex(where: { $0.id == entryID })
+        else { return }
+
+        entries[index].verdict = verdict
+        entries[index].assessment = "Marked manually."
+        if verdict == .healthy {
+            entries[index].roast = nil
+        }
+        log.foodEntries = entries
+        saveContext(operation: "Correct food verdict")
+        persistBackup()
+    }
+
+    func deleteFoodEntry(entryID: UUID, dayKey: String) {
+        guard let log = log(for: dayKey), var entries = log.foodEntries else { return }
+        entries.removeAll { $0.id == entryID }
+        log.foodEntries = entries
+        saveContext(operation: "Delete food entry")
+        persistBackup()
+    }
+
+    private func replaceFoodEntry(_ entry: FoodEntry, in log: DailyLog) {
+        guard var entries = log.foodEntries,
+              let index = entries.firstIndex(where: { $0.id == entry.id })
+        else { return }
+        entries[index] = entry
+        log.foodEntries = entries
+    }
+
+    private func log(for dayKey: String) -> DailyLog? {
+        let descriptor = FetchDescriptor<DailyLog>(predicate: #Predicate { $0.dayKey == dayKey })
+        do {
+            return try context.fetch(descriptor).first
+        } catch {
+            AppLogger.report(error, operation: "Fetch food history day", logger: AppLogger.persistence)
+            return nil
+        }
+    }
+
     /// Explicitly discards today's manual total in favor of the latest
     /// HealthKit value. Returns false when HealthKit has no sleep data to use.
     @discardableResult
