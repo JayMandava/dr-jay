@@ -238,12 +238,25 @@ final class DayCoordinator {
     // MARK: - Snapshot / Live Activity plumbing
 
     private func currentWindow(settings: AppSettings) -> CheckInWindow {
-        let hour = Calendar.current.component(.hour, from: .now)
-        switch hour {
-        case ..<12: return .morning
-        case 12..<18: return .afternoon
-        default: return .night
-        }
+        let components = Calendar.current.dateComponents([.hour, .minute], from: .now)
+        let currentMinutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
+
+        return CheckInWindow.allCases.min { lhs, rhs in
+            let lhsHour = settings.checkInHours[lhs] ?? lhs.defaultHour
+            let rhsHour = settings.checkInHours[rhs] ?? rhs.defaultHour
+            let lhsDistance = circularMinuteDistance(from: currentMinutes, to: lhsHour * 60)
+            let rhsDistance = circularMinuteDistance(from: currentMinutes, to: rhsHour * 60)
+
+            if lhsDistance == rhsDistance {
+                return lhsHour < rhsHour
+            }
+            return lhsDistance < rhsDistance
+        } ?? .morning
+    }
+
+    private func circularMinuteDistance(from start: Int, to end: Int) -> Int {
+        let directDistance = abs(start - end)
+        return min(directDistance, 24 * 60 - directDistance)
     }
 
     /// Sleep/water messages are derived straight from today's `checkIns` —
