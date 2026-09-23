@@ -97,7 +97,8 @@ final class DayCoordinator {
             }
         }
 
-        if !(log.foodEntries ?? []).isEmpty, log.foodScoreIsCurrent != true {
+        if !(log.foodEntries ?? []).isEmpty,
+           log.foodScoreIsCurrent != true || log.foodScoreVersion != FoodScoreCalculator.version {
             await refreshFoodScore(for: log, intensity: settings.roastIntensity)
         }
 
@@ -164,33 +165,27 @@ final class DayCoordinator {
         var entries = log.foodEntries ?? []
         entries.append(entry)
         log.foodEntries = entries
-        log.foodScore = nil
-        log.foodScoreSummary = nil
-        log.foodScoreIsCurrent = false
+        invalidateFoodScore(for: log)
         saveContext(operation: "Log food entry")
         persistBackup()
 
         let settings = SharedStore.loadSettings()
-        guard let assessment = await FoodAnalyzer.analyze(
-            text,
-            dayEntries: entries,
-            intensity: settings.roastIntensity
-        ) else {
+        guard let assessment = await FoodAnalyzer.analyze(text, intensity: settings.roastIntensity) else {
             log.foodScoreIsCurrent = true
+            log.foodScoreVersion = FoodScoreCalculator.version
             saveContext(operation: "Record unavailable food assessment")
             persistBackup()
             return entry
         }
 
-        entry.verdict = assessment.entry.verdict
-        entry.assessment = assessment.entry.explanation
-        entry.roast = assessment.entry.roast
+        entry.verdict = assessment.verdict
+        entry.assessment = assessment.explanation
+        entry.roast = assessment.roast
+        entry.qualityScore = assessment.qualityScore
         replaceFoodEntry(entry, in: log)
-        log.foodScore = assessment.day.score
-        log.foodScoreSummary = assessment.day.summary
-        log.foodScoreIsCurrent = true
         saveContext(operation: "Save food assessment")
         persistBackup()
+        await refreshFoodScore(for: log, intensity: settings.roastIntensity)
         return entry
     }
 
@@ -207,6 +202,7 @@ final class DayCoordinator {
 
         entries[index].verdict = verdict
         entries[index].assessment = "Marked manually."
+        entries[index].qualityScore = FoodScoreCalculator.defaultScore(for: verdict)
         if verdict == .healthy {
             entries[index].roast = nil
         }
@@ -239,6 +235,7 @@ final class DayCoordinator {
         log.foodScore = nil
         log.foodScoreSummary = nil
         log.foodScoreIsCurrent = false
+        log.foodScoreVersion = nil
     }
 
     private func refreshFoodScore(for log: DailyLog, intensity: RoastIntensity) async {
@@ -247,6 +244,7 @@ final class DayCoordinator {
             log.foodScore = nil
             log.foodScoreSummary = nil
             log.foodScoreIsCurrent = true
+            log.foodScoreVersion = FoodScoreCalculator.version
             saveContext(operation: "Clear empty food score")
             persistBackup()
             return
@@ -256,6 +254,7 @@ final class DayCoordinator {
         log.foodScore = assessment?.score
         log.foodScoreSummary = assessment?.summary
         log.foodScoreIsCurrent = true
+        log.foodScoreVersion = FoodScoreCalculator.version
         saveContext(operation: "Save daily food score")
         persistBackup()
     }

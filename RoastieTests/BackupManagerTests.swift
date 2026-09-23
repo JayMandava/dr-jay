@@ -21,11 +21,13 @@ final class BackupManagerTests: XCTestCase {
             timestamp: TestSupport.date(23, hour: 10),
             verdict: .healthy,
             assessment: "Balanced meal.",
-            roast: nil
+            roast: nil,
+            qualityScore: 92
         )]
         source.foodScore = 88
         source.foodScoreSummary = "The vegetables have staged a competent intervention."
         source.foodScoreIsCurrent = true
+        source.foodScoreVersion = FoodScoreCalculator.version
 
         let url = FileManager.default.temporaryDirectory
             .appending(path: "roastie-backup-\(UUID().uuidString).json")
@@ -47,6 +49,7 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertEqual(restored.foodScore, 88)
         XCTAssertEqual(restored.foodScoreSummary, source.foodScoreSummary)
         XCTAssertEqual(restored.foodScoreIsCurrent, true)
+        XCTAssertEqual(restored.foodScoreVersion, FoodScoreCalculator.version)
     }
 
     func testVersionOneBackupDefaultsToNoFoodEntries() throws {
@@ -79,5 +82,6 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertNil(restored.foodScore)
         XCTAssertNil(restored.foodScoreSummary)
         XCTAssertEqual(restored.foodScoreIsCurrent, false)
+        XCTAssertNil(restored.foodScoreVersion)
     }
 }

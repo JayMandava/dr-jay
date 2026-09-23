@@ -72,6 +72,9 @@ struct FoodEntry: Codable, Hashable, Identifiable, Sendable {
     var verdict: FoodVerdict
     var assessment: String?
     var roast: String?
+    /// Per-entry nutrition quality used to build an order-independent daily score.
+    /// Optional so entries written before scoring v2 continue to decode.
+    var qualityScore: Int? = nil
 }
 
 enum FoodScoreBand: String, Codable, Equatable, Sendable {
@@ -107,6 +110,7 @@ final class DailyLog {
     var foodScore: Int?
     var foodScoreSummary: String?
     var foodScoreIsCurrent: Bool?
+    var foodScoreVersion: Int?
 
     init(dayKey: String, date: Date, waterGoalBottles: Int) {
         self.dayKey = dayKey
@@ -121,6 +125,7 @@ final class DailyLog {
         self.foodScore = nil
         self.foodScoreSummary = nil
         self.foodScoreIsCurrent = true
+        self.foodScoreVersion = FoodScoreCalculator.version
     }
 
     var sleepGoalMet: Bool? {

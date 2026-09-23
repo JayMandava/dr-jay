@@ -7,30 +7,61 @@ struct FoodAssessment: Sendable {
     var verdict: FoodVerdict
     var explanation: String
     var roast: String?
+    var qualityScore: Int
 }
 
 struct DailyFoodAssessment: Sendable {
     var score: Int
-    var summary: String
+    var summary: String?
 }
 
-struct FoodLogAssessment: Sendable {
-    var entry: FoodAssessment
-    var day: DailyFoodAssessment
+/// Converts bounded per-entry nutrition quality into a stable daily score.
+/// The arithmetic mean is intentionally order-independent.
+enum FoodScoreCalculator {
+    static let version = 2
+
+    static func score(entries: [FoodEntry]) -> Int? {
+        guard !entries.isEmpty else { return nil }
+        let scores = entries.compactMap(entryScore)
+        guard scores.count == entries.count else { return nil }
+        return Int((Double(scores.reduce(0, +)) / Double(scores.count)).rounded())
+    }
+
+    static func normalized(_ score: Int, for verdict: FoodVerdict) -> Int? {
+        switch verdict {
+        case .healthy:
+            min(100, max(80, score))
+        case .unhealthy:
+            min(59, max(0, score))
+        case .unanalyzed:
+            nil
+        }
+    }
+
+    static func defaultScore(for verdict: FoodVerdict) -> Int? {
+        switch verdict {
+        case .healthy: 90
+        case .unhealthy: 30
+        case .unanalyzed: nil
+        }
+    }
+
+    private static func entryScore(_ entry: FoodEntry) -> Int? {
+        guard let candidate = entry.qualityScore ?? defaultScore(for: entry.verdict) else {
+            return nil
+        }
+        return normalized(candidate, for: entry.verdict)
+    }
 }
 
 /// Classifies a plain-language food entry locally. No food text leaves the
 /// device. An unavailable model returns nil so the caller can preserve the
 /// entry as explicitly unanalyzed rather than guessing.
 enum FoodAnalyzer {
-    static func analyze(
-        _ food: String,
-        dayEntries: [FoodEntry],
-        intensity: RoastIntensity
-    ) async -> FoodLogAssessment? {
+    static func analyze(_ food: String, intensity: RoastIntensity) async -> FoodAssessment? {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
-            return await analyzeOnDevice(food, dayEntries: dayEntries, intensity: intensity)
+            return await analyzeOnDevice(food, intensity: intensity)
         }
         #endif
         return nil
@@ -40,21 +71,28 @@ enum FoodAnalyzer {
         entries: [FoodEntry],
         intensity: RoastIntensity
     ) async -> DailyFoodAssessment? {
+        guard let score = FoodScoreCalculator.score(entries: entries) else { return nil }
+
+        let summary: String?
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
-            return await scoreDayOnDevice(entries: entries, intensity: intensity)
+            summary = await summarizeDayOnDevice(entries: entries, score: score, intensity: intensity)
+        } else {
+            summary = nil
         }
+        #else
+        summary = nil
         #endif
-        return nil
+
+        return DailyFoodAssessment(score: score, summary: summary)
     }
 
     #if canImport(FoundationModels)
     @available(iOS 26.0, *)
     private static func analyzeOnDevice(
         _ food: String,
-        dayEntries: [FoodEntry],
         intensity: RoastIntensity
-    ) async -> FoodLogAssessment? {
+    ) async -> FoodAssessment? {
         guard case .available = SystemLanguageModel.default.availability else {
             return nil
         }
@@ -62,54 +100,52 @@ enum FoodAnalyzer {
         let session = LanguageModelSession(instructions: entryInstructions(intensity: intensity))
         do {
             let response = try await session.respond(
-                to: """
-                Newly logged food: \(food)
-
-                All food logged so far today:
-                \(entryList(dayEntries))
-                """,
+                to: "Food eaten: \(food)",
                 generating: GeneratedFoodAssessment.self
             )
+            let verdict: FoodVerdict = response.content.isHealthy ? .healthy : .unhealthy
+            guard let qualityScore = FoodScoreCalculator.normalized(
+                response.content.qualityScore,
+                for: verdict
+            ) else { return nil }
+
             let explanation = clean(response.content.explanation)
             let roast = clean(response.content.roast)
-            return FoodLogAssessment(
-                entry: FoodAssessment(
-                    verdict: response.content.isHealthy ? .healthy : .unhealthy,
-                    explanation: explanation,
-                    roast: response.content.isHealthy || roast.isEmpty ? nil : roast
-                ),
-                day: DailyFoodAssessment(
-                    score: min(100, max(0, response.content.dailyScore)),
-                    summary: clean(response.content.dailySummary)
-                )
+            return FoodAssessment(
+                verdict: verdict,
+                explanation: explanation,
+                roast: verdict == .healthy || roast.isEmpty ? nil : roast,
+                qualityScore: qualityScore
             )
         } catch {
-            AppLogger.report(error, operation: "Analyse food entry and daily score", logger: AppLogger.food)
+            AppLogger.report(error, operation: "Analyse food entry", logger: AppLogger.food)
             return nil
         }
     }
 
     @available(iOS 26.0, *)
-    private static func scoreDayOnDevice(
+    private static func summarizeDayOnDevice(
         entries: [FoodEntry],
+        score: Int,
         intensity: RoastIntensity
-    ) async -> DailyFoodAssessment? {
-        guard !entries.isEmpty,
-              case .available = SystemLanguageModel.default.availability
-        else { return nil }
+    ) async -> String? {
+        guard case .available = SystemLanguageModel.default.availability else {
+            return nil
+        }
 
-        let session = LanguageModelSession(instructions: dailyScoreInstructions(intensity: intensity))
+        let band = FoodScoreBand.classify(score)
+        let session = LanguageModelSession(
+            instructions: dailySummaryInstructions(score: score, band: band, intensity: intensity)
+        )
         do {
             let response = try await session.respond(
                 to: "All food logged so far today:\n\(entryList(entries))",
-                generating: GeneratedDailyFoodScore.self
+                generating: GeneratedDailyFoodSummary.self
             )
-            return DailyFoodAssessment(
-                score: min(100, max(0, response.content.score)),
-                summary: clean(response.content.summary)
-            )
+            let summary = clean(response.content.summary)
+            return summary.isEmpty ? nil : summary
         } catch {
-            AppLogger.report(error, operation: "Recompute daily food score", logger: AppLogger.food)
+            AppLogger.report(error, operation: "Summarize daily food score", logger: AppLogger.food)
             return nil
         }
     }
@@ -119,39 +155,36 @@ enum FoodAnalyzer {
         """
         \(housePersona(intensity: intensity))
 
-        You assess a user's plain-language food log using ordinary nutritional principles.
-        Classify the complete entry as healthy or unhealthy. Healthy means a generally balanced,
-        nutrient-dense choice; unhealthy means the overall entry is dominated by highly processed,
-        deep-fried, excessively sugary, or similarly poor choices. Use the description provided;
-        do not invent portions, medical conditions, allergies, or dietary restrictions.
+        Assess one plain-language food entry using ordinary nutritional principles.
+        Classify it as healthy or unhealthy. Healthy means generally balanced and nutrient-dense;
+        unhealthy means dominated by highly processed, deep-fried, excessively sugary, or similarly
+        poor choices. Use only the description provided. Do not invent portions, calories, medical
+        conditions, allergies, or dietary restrictions.
 
-        Give one short factual explanation under 100 characters. If unhealthy, also write one
-        House-style roast under 140 characters that targets the food choice—not the
-        user's body, weight, worth, or eating habits. No diagnosis, eating-disorder language,
-        profanity, emoji, quotation marks, or hashtags. If healthy, return an empty roast.
-
-        Also score all foods logged today from 0 to 100 using this exact rubric:
-        80–100 is Good, 60–79 is Bad, and 0–59 is Ugly. Write one House-style daily summary
-        under 140 characters. A Good score must read as clean clinical approval. Bad and Ugly
-        should receive an appropriately sharp roast. Judge only the food provided and do not
-        pretend this is a calorie count or medical nutrition assessment.
+        Assign nutrition quality from 80 through 100 when healthy, or 0 through 59 when unhealthy.
+        Consider balance, nutrient density, and degree of processing within the matching range.
+        Give one factual explanation under 100 characters. If unhealthy, write one House-style roast
+        under 140 characters targeting the food choice—not the user's body, weight, worth, or eating
+        habits. No diagnosis, eating-disorder language, profanity, emoji, quotation marks, or hashtags.
+        If healthy, return an empty roast.
         """
     }
 
     @available(iOS 26.0, *)
-    private static func dailyScoreInstructions(intensity: RoastIntensity) -> String {
+    private static func dailySummaryInstructions(
+        score: Int,
+        band: FoodScoreBand,
+        intensity: RoastIntensity
+    ) -> String {
         """
         \(housePersona(intensity: intensity))
 
-        Score the complete food log from 0 to 100 using ordinary nutritional principles.
-        Use this exact rubric: 80–100 is Good, 60–79 is Bad, and 0–59 is Ugly.
-        Treat any supplied Healthy or Unhealthy verdict as authoritative; assess Unanalyzed
-        entries yourself. Judge only what was logged. Do not invent portions, calories,
-        conditions, allergies, or dietary restrictions.
-
-        Write one House-style summary under 140 characters. Good must be unambiguously positive
-        clinical approval. Bad and Ugly should be an appropriately sharp roast. Target food
-        choices only—never body, weight, worth, or eating habits. No diagnosis, profanity,
+        The app has already calculated today's order-independent food score as \(score), classified
+        as \(band.rawValue). Treat that score and classification as fixed; do not recalculate or
+        contradict them. Write one House-style summary under 140 characters based only on the foods
+        supplied. Good must be clear clinical approval. Bad and Ugly should get an appropriately
+        sharp roast. Target food choices only—never body, weight, worth, or eating habits. Do not
+        invent portions, calories, diagnoses, allergies, or dietary restrictions. No profanity,
         eating-disorder language, emoji, quotation marks, or hashtags.
         """
     }
@@ -174,7 +207,9 @@ enum FoodAnalyzer {
             .sorted { $0.timestamp < $1.timestamp }
             .enumerated()
             .map { index, entry in
-                "\(index + 1). [\(entry.verdict.label)] \(entry.text)"
+                let score = entry.qualityScore ?? FoodScoreCalculator.defaultScore(for: entry.verdict)
+                let scoreText = score.map(String.init) ?? "unavailable"
+                return "\(index + 1). [\(entry.verdict.label), quality \(scoreText)] \(entry.text)"
             }
             .joined(separator: "\n")
     }
@@ -195,20 +230,14 @@ enum FoodAnalyzer {
         @Guide(description: "For unhealthy food only: one short clinical roast under 140 characters. Empty when healthy.")
         var roast: String
 
-        @Guide(description: "A whole number from 0 through 100 scoring all food logged today.")
-        var dailyScore: Int
-
-        @Guide(description: "One House-style summary of today's food score, under 140 characters.")
-        var dailySummary: String
+        @Guide(description: "Nutrition quality: 80 through 100 if healthy, or 0 through 59 if unhealthy.")
+        var qualityScore: Int
     }
 
     @available(iOS 26.0, *)
     @Generable
-    fileprivate struct GeneratedDailyFoodScore {
-        @Guide(description: "A whole number from 0 through 100 scoring all food logged today.")
-        var score: Int
-
-        @Guide(description: "One House-style summary of today's food score, under 140 characters.")
+    fileprivate struct GeneratedDailyFoodSummary {
+        @Guide(description: "One House-style summary of the fixed daily food score, under 140 characters.")
         var summary: String
     }
     #endif
