@@ -222,12 +222,15 @@ private struct FoodScoreCard: View {
                 Spacer()
 
                 Button(action: onLogFood) {
-                    Label("Log", systemImage: "plus")
+                    Label("Log Food", systemImage: "fork.knife")
                         .font(.subheadline.weight(.semibold))
+                        .padding(.vertical, 9)
+                        .padding(.horizontal, 12)
                 }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-                .tint(.green)
+                .buttonStyle(PressableButtonStyle())
+                .buttonBorderShape(.roundedRectangle(radius: 12))
+                .background(.green.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                .foregroundStyle(.green)
             }
 
             if hasEntries {
@@ -271,7 +274,7 @@ private struct FoodScoreCard: View {
                             .frame(width: 3)
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Dr Jay’s note")
+                            Text("Dr Jay")
                                 .font(.caption2.weight(.semibold))
                                 .tracking(0.5)
                                 .textCase(.uppercase)
@@ -321,9 +324,8 @@ private struct FoodScoreCard: View {
     }
 }
 
-/// Styled like a clinical chart note: a colored severity stripe, a small-caps
-/// context label, and the diagnosis itself in a serif face — deliberately
-/// unflashy, no emoji, no cheerful heading.
+/// Styled like a clinical chart note: a colored severity stripe, Dr Jay as the
+/// consistent author, and compact context metadata beside it.
 private struct LatestMessageCard: View {
     let record: CheckInRecord
 
@@ -337,13 +339,22 @@ private struct LatestMessageCard: View {
                 .padding(.vertical, 14)
 
             VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: record.kind == .sleep ? "moon.zzz.fill" : "drop.fill")
-                        .font(.caption2)
-                    Text("\(record.window.label) · \(record.kind == .sleep ? "Sleep" : "Water")")
-                        .font(.caption.weight(.semibold))
+                HStack(spacing: 8) {
+                    Text("Dr Jay")
+                        .font(.caption2.weight(.semibold))
                         .tracking(0.4)
                         .textCase(.uppercase)
+
+                    Spacer()
+
+                    Label(
+                        "\(record.window.label) · \(record.kind == .sleep ? "Sleep" : "Water")",
+                        systemImage: record.kind == .sleep ? "moon.zzz.fill" : "drop.fill"
+                    )
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.secondary.opacity(0.09), in: Capsule())
                 }
                 .foregroundStyle(.secondary)
 
