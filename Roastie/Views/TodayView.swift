@@ -80,35 +80,16 @@ struct TodayView: View {
                     }
                     .font(.subheadline.weight(.semibold))
 
-                    Button {
-                        Haptics.tap()
-                        showFoodSheet = true
-                    } label: {
-                        Label("Log Food", systemImage: "fork.knife")
-                            .padding(.vertical, 14)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(PressableButtonStyle())
-                    .buttonBorderShape(.roundedRectangle(radius: 14))
-                    .background(.green.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
-                    .foregroundStyle(.green)
-                    .font(.subheadline.weight(.semibold))
-
-                    if !(today?.foodEntries ?? []).isEmpty {
-                        VStack(alignment: .leading, spacing: 14) {
-                            Label("Food today", systemImage: "fork.knife")
-                                .font(.headline)
-
-                            FoodScoreSummary(
-                                score: today?.foodScore,
-                                summary: today?.foodScoreSummary,
-                                isCurrent: today?.foodScoreIsCurrent == true
-                            )
+                    FoodScoreCard(
+                        score: today?.foodScore,
+                        summary: today?.foodScoreSummary,
+                        isCurrent: today?.foodScoreIsCurrent == true,
+                        hasEntries: !(today?.foodEntries ?? []).isEmpty,
+                        onLogFood: {
+                            Haptics.tap()
+                            showFoodSheet = true
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(14)
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
-                    }
+                    )
 
                     HStack {
                         Label(currentStreakLabel, systemImage: "flame.fill")
@@ -225,47 +206,92 @@ private struct FoodFeedback: Identifiable {
     let message: String
 }
 
-private struct FoodScoreSummary: View {
+private struct FoodScoreCard: View {
     let score: Int?
     let summary: String?
     let isCurrent: Bool
+    let hasEntries: Bool
+    let onLogFood: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Food score")
-                        .font(.subheadline.weight(.semibold))
-                    Text("So far today")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Label("Food today", systemImage: "fork.knife")
+                    .font(.headline)
 
                 Spacer()
 
-                if let score {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text("\(score)")
-                            .font(.title.bold())
-                            .monospacedDigit()
-                        Text(FoodScoreBand.classify(score).rawValue)
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(scoreColor(score))
-                    }
-                } else {
-                    Text(isCurrent ? "Unavailable" : "Calculating…")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
+                Button(action: onLogFood) {
+                    Label("Log", systemImage: "plus")
+                        .font(.subheadline.weight(.semibold))
                 }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .tint(.green)
             }
 
-            if let summary, !summary.isEmpty {
-                Text(summary)
-                    .font(.system(.subheadline, design: .serif))
+            if hasEntries {
+                if let score {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("\(score)")
+                            .font(.system(size: 38, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                        Text("/100")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Text(FoodScoreBand.classify(score).rawValue.uppercased())
+                            .font(.caption.weight(.bold))
+                            .tracking(0.7)
+                            .foregroundStyle(scoreColor(score))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(scoreColor(score).opacity(0.14), in: Capsule())
+                    }
+                } else {
+                    HStack(spacing: 8) {
+                        if !isCurrent {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text(isCurrent ? "Score unavailable" : "Calculating score…")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let presentedSummary {
+                    Divider()
+
+                    HStack(alignment: .top, spacing: 10) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(score.map { scoreColor($0) } ?? Color.secondary)
+                            .frame(width: 3)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Dr Jay’s note")
+                                .font(.caption2.weight(.semibold))
+                                .tracking(0.5)
+                                .textCase(.uppercase)
+                                .foregroundStyle(.secondary)
+                            Text(presentedSummary)
+                                .font(.system(.subheadline, design: .serif))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            } else {
+                Text("Log what you eat. Dr Jay will handle the diagnosis.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.separator, lineWidth: 0.5))
     }
 
     private func scoreColor(_ score: Int) -> Color {
@@ -274,6 +300,24 @@ private struct FoodScoreSummary: View {
         case .bad: .orange
         case .ugly: .red
         }
+    }
+
+    private var presentedSummary: String? {
+        guard let summary else { return nil }
+        var result = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !result.isEmpty else { return nil }
+
+        for band in ["Good", "Bad", "Ugly"] {
+            for separator in [":", " —", " –", " -", "."] {
+                let prefix = band + separator
+                if result.range(of: prefix, options: [.anchored, .caseInsensitive]) != nil {
+                    result = String(result.dropFirst(prefix.count))
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    return result.isEmpty ? nil : result
+                }
+            }
+        }
+        return result
     }
 }
 

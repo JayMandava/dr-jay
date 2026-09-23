@@ -183,8 +183,9 @@ enum FoodAnalyzer {
         as \(band.rawValue). Treat that score and classification as fixed; do not recalculate or
         contradict them. Write one House-style summary under 140 characters based only on the foods
         supplied. Good must be clear clinical approval. Bad and Ugly should get an appropriately
-        sharp roast. Target food choices only—never body, weight, worth, or eating habits. Do not
-        invent portions, calories, diagnoses, allergies, or dietary restrictions. No profanity,
+        sharp roast. Do not repeat or begin with the score or Good, Bad, or Ugly label. Target food
+        choices only—never body, weight, worth, or eating habits. Do not invent portions, calories,
+        diagnoses, allergies, or dietary restrictions. No profanity,
         eating-disorder language, emoji, quotation marks, or hashtags.
         """
     }
