@@ -13,9 +13,6 @@ struct TodayView: View {
 
     private var today: DailyLog? { logs.first { $0.dayKey == Date().dayKey } }
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
-    private var foodEntries: [FoodEntry] {
-        (today?.foodEntries ?? []).sorted { $0.timestamp > $1.timestamp }
-    }
 
     var body: some View {
         NavigationStack {
@@ -97,7 +94,7 @@ struct TodayView: View {
                     .foregroundStyle(.green)
                     .font(.subheadline.weight(.semibold))
 
-                    if !foodEntries.isEmpty {
+                    if !(today?.foodEntries ?? []).isEmpty {
                         VStack(alignment: .leading, spacing: 14) {
                             Label("Food today", systemImage: "fork.knife")
                                 .font(.headline)
@@ -107,23 +104,6 @@ struct TodayView: View {
                                 summary: today?.foodScoreSummary,
                                 isCurrent: today?.foodScoreIsCurrent == true
                             )
-
-                            Divider()
-
-                            ForEach(foodEntries) { entry in
-                                FoodEntryRow(
-                                    entry: entry,
-                                    onMarkHealthy: {
-                                        updateFood(entry, verdict: .healthy)
-                                    },
-                                    onMarkUnhealthy: {
-                                        updateFood(entry, verdict: .unhealthy)
-                                    },
-                                    onDelete: {
-                                        deleteFood(entry)
-                                    }
-                                )
-                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
@@ -231,29 +211,10 @@ struct TodayView: View {
         case .unanalyzed:
             foodFeedback = FoodFeedback(
                 title: "Food logged",
-                message: "Dr Jay couldn’t analyse this entry on this device. You can classify it from the food list."
+                message: "Dr Jay couldn’t analyse this entry on this device. You can classify it from History."
             )
         case .healthy:
             break
-        }
-    }
-
-    private func updateFood(_ entry: FoodEntry, verdict: FoodVerdict) {
-        Task {
-            await DayCoordinator.shared.updateFoodVerdict(
-                entryID: entry.id,
-                dayKey: today?.dayKey ?? Date().dayKey,
-                verdict: verdict
-            )
-        }
-    }
-
-    private func deleteFood(_ entry: FoodEntry) {
-        Task {
-            await DayCoordinator.shared.deleteFoodEntry(
-                entryID: entry.id,
-                dayKey: today?.dayKey ?? Date().dayKey
-            )
         }
     }
 }
