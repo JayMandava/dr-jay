@@ -37,10 +37,12 @@ struct HistoryView: View {
                                         updateFood(entry, in: log, verdict: .unhealthy)
                                     },
                                     onDelete: {
-                                        DayCoordinator.shared.deleteFoodEntry(
-                                            entryID: entry.id,
-                                            dayKey: log.dayKey
-                                        )
+                                        Task {
+                                            await DayCoordinator.shared.deleteFoodEntry(
+                                                entryID: entry.id,
+                                                dayKey: log.dayKey
+                                            )
+                                        }
                                     }
                                 )
                                 .padding(.vertical, 4)
@@ -77,7 +79,7 @@ struct HistoryView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if foodCount > 0 {
-                    Text("\(foodCount) food entr\(foodCount == 1 ? "y" : "ies")")
+                    Text(foodSummary(log, count: foodCount))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -88,11 +90,19 @@ struct HistoryView: View {
     }
 
     private func updateFood(_ entry: FoodEntry, in log: DailyLog, verdict: FoodVerdict) {
-        DayCoordinator.shared.updateFoodVerdict(
-            entryID: entry.id,
-            dayKey: log.dayKey,
-            verdict: verdict
-        )
+        Task {
+            await DayCoordinator.shared.updateFoodVerdict(
+                entryID: entry.id,
+                dayKey: log.dayKey,
+                verdict: verdict
+            )
+        }
+    }
+
+    private func foodSummary(_ log: DailyLog, count: Int) -> String {
+        let entryCount = "\(count) food entr\(count == 1 ? "y" : "ies")"
+        guard let score = log.foodScore else { return "\(entryCount) · Food score —" }
+        return "\(entryCount) · \(score) \(FoodScoreBand.classify(score).rawValue)"
     }
 
     private func statusIcon(_ log: DailyLog) -> some View {

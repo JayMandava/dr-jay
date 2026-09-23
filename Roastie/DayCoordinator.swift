@@ -97,6 +97,10 @@ final class DayCoordinator {
             }
         }
 
+        if !(log.foodEntries ?? []).isEmpty, log.foodScoreIsCurrent != true {
+            await refreshFoodScore(for: log, intensity: settings.roastIntensity)
+        }
+
         await pushSnapshot(log: log, settings: settings)
         await syncLiveActivity(log: log)
         persistBackup()
@@ -160,18 +164,31 @@ final class DayCoordinator {
         var entries = log.foodEntries ?? []
         entries.append(entry)
         log.foodEntries = entries
+        log.foodScore = nil
+        log.foodScoreSummary = nil
+        log.foodScoreIsCurrent = false
         saveContext(operation: "Log food entry")
         persistBackup()
 
         let settings = SharedStore.loadSettings()
-        guard let assessment = await FoodAnalyzer.analyze(text, intensity: settings.roastIntensity) else {
+        guard let assessment = await FoodAnalyzer.analyze(
+            text,
+            dayEntries: entries,
+            intensity: settings.roastIntensity
+        ) else {
+            log.foodScoreIsCurrent = true
+            saveContext(operation: "Record unavailable food assessment")
+            persistBackup()
             return entry
         }
 
-        entry.verdict = assessment.verdict
-        entry.assessment = assessment.explanation
-        entry.roast = assessment.roast
+        entry.verdict = assessment.entry.verdict
+        entry.assessment = assessment.entry.explanation
+        entry.roast = assessment.entry.roast
         replaceFoodEntry(entry, in: log)
+        log.foodScore = assessment.day.score
+        log.foodScoreSummary = assessment.day.summary
+        log.foodScoreIsCurrent = true
         saveContext(operation: "Save food assessment")
         persistBackup()
         return entry
@@ -181,7 +198,7 @@ final class DayCoordinator {
         entryID: UUID,
         dayKey: String,
         verdict: FoodVerdict
-    ) {
+    ) async {
         guard verdict != .unanalyzed,
               let log = log(for: dayKey),
               var entries = log.foodEntries,
@@ -194,16 +211,20 @@ final class DayCoordinator {
             entries[index].roast = nil
         }
         log.foodEntries = entries
+        invalidateFoodScore(for: log)
         saveContext(operation: "Correct food verdict")
         persistBackup()
+        await refreshFoodScore(for: log, intensity: SharedStore.loadSettings().roastIntensity)
     }
 
-    func deleteFoodEntry(entryID: UUID, dayKey: String) {
+    func deleteFoodEntry(entryID: UUID, dayKey: String) async {
         guard let log = log(for: dayKey), var entries = log.foodEntries else { return }
         entries.removeAll { $0.id == entryID }
         log.foodEntries = entries
+        invalidateFoodScore(for: log)
         saveContext(operation: "Delete food entry")
         persistBackup()
+        await refreshFoodScore(for: log, intensity: SharedStore.loadSettings().roastIntensity)
     }
 
     private func replaceFoodEntry(_ entry: FoodEntry, in log: DailyLog) {
@@ -212,6 +233,31 @@ final class DayCoordinator {
         else { return }
         entries[index] = entry
         log.foodEntries = entries
+    }
+
+    private func invalidateFoodScore(for log: DailyLog) {
+        log.foodScore = nil
+        log.foodScoreSummary = nil
+        log.foodScoreIsCurrent = false
+    }
+
+    private func refreshFoodScore(for log: DailyLog, intensity: RoastIntensity) async {
+        let entries = log.foodEntries ?? []
+        guard !entries.isEmpty else {
+            log.foodScore = nil
+            log.foodScoreSummary = nil
+            log.foodScoreIsCurrent = true
+            saveContext(operation: "Clear empty food score")
+            persistBackup()
+            return
+        }
+
+        let assessment = await FoodAnalyzer.scoreDay(entries: entries, intensity: intensity)
+        log.foodScore = assessment?.score
+        log.foodScoreSummary = assessment?.summary
+        log.foodScoreIsCurrent = true
+        saveContext(operation: "Save daily food score")
+        persistBackup()
     }
 
     private func log(for dayKey: String) -> DailyLog? {

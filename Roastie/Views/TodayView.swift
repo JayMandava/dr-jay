@@ -102,6 +102,14 @@ struct TodayView: View {
                             Label("Food today", systemImage: "fork.knife")
                                 .font(.headline)
 
+                            FoodScoreSummary(
+                                score: today?.foodScore,
+                                summary: today?.foodScoreSummary,
+                                isCurrent: today?.foodScoreIsCurrent == true
+                            )
+
+                            Divider()
+
                             ForEach(foodEntries) { entry in
                                 FoodEntryRow(
                                     entry: entry,
@@ -231,18 +239,22 @@ struct TodayView: View {
     }
 
     private func updateFood(_ entry: FoodEntry, verdict: FoodVerdict) {
-        DayCoordinator.shared.updateFoodVerdict(
-            entryID: entry.id,
-            dayKey: today?.dayKey ?? Date().dayKey,
-            verdict: verdict
-        )
+        Task {
+            await DayCoordinator.shared.updateFoodVerdict(
+                entryID: entry.id,
+                dayKey: today?.dayKey ?? Date().dayKey,
+                verdict: verdict
+            )
+        }
     }
 
     private func deleteFood(_ entry: FoodEntry) {
-        DayCoordinator.shared.deleteFoodEntry(
-            entryID: entry.id,
-            dayKey: today?.dayKey ?? Date().dayKey
-        )
+        Task {
+            await DayCoordinator.shared.deleteFoodEntry(
+                entryID: entry.id,
+                dayKey: today?.dayKey ?? Date().dayKey
+            )
+        }
     }
 }
 
@@ -250,6 +262,58 @@ private struct FoodFeedback: Identifiable {
     let id = UUID()
     let title: String
     let message: String
+}
+
+private struct FoodScoreSummary: View {
+    let score: Int?
+    let summary: String?
+    let isCurrent: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Food score")
+                        .font(.subheadline.weight(.semibold))
+                    Text("So far today")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                if let score {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(score)")
+                            .font(.title.bold())
+                            .monospacedDigit()
+                        Text(FoodScoreBand.classify(score).rawValue)
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(scoreColor(score))
+                    }
+                } else {
+                    Text(isCurrent ? "Unavailable" : "Calculating…")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let summary, !summary.isEmpty {
+                Text(summary)
+                    .font(.system(.subheadline, design: .serif))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func scoreColor(_ score: Int) -> Color {
+        switch FoodScoreBand.classify(score) {
+        case .good: .green
+        case .bad: .orange
+        case .ugly: .red
+        }
+    }
 }
 
 /// Styled like a clinical chart note: a colored severity stripe, a small-caps

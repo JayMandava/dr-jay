@@ -10,7 +10,7 @@ import Foundation
 /// reinstall, a new device, or just wanting your history in a plain file.
 enum BackupManager {
     private static let fileName = "dr-jay-backup.json"
-    private static let currentVersion = 2
+    private static let currentVersion = 3
 
     enum BackupError: LocalizedError {
         case unsupportedVersion(Int)
@@ -35,6 +35,9 @@ enum BackupManager {
         /// Optional keeps version-1 backups decodable; they simply contain no
         /// food history.
         var foodEntries: [FoodEntry]?
+        var foodScore: Int?
+        var foodScoreSummary: String?
+        var foodScoreIsCurrent: Bool?
     }
 
     struct BackupPayload: Codable, Equatable {
@@ -65,7 +68,10 @@ enum BackupManager {
                     waterBottlesLogged: $0.waterBottlesLogged,
                     waterTimestamps: $0.waterTimestamps,
                     checkIns: $0.checkIns,
-                    foodEntries: $0.foodEntries
+                    foodEntries: $0.foodEntries,
+                    foodScore: $0.foodScore,
+                    foodScoreSummary: $0.foodScoreSummary,
+                    foodScoreIsCurrent: $0.foodScoreIsCurrent
                 )
             }
         )
@@ -96,5 +102,8 @@ enum BackupManager {
         log.waterTimestamps = entry.waterTimestamps
         log.checkIns = entry.checkIns
         log.foodEntries = entry.foodEntries ?? []
+        log.foodScore = entry.foodScore
+        log.foodScoreSummary = entry.foodScoreSummary
+        log.foodScoreIsCurrent = entry.foodScoreIsCurrent ?? false
     }
 }

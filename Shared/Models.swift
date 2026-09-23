@@ -74,6 +74,20 @@ struct FoodEntry: Codable, Hashable, Identifiable, Sendable {
     var roast: String?
 }
 
+enum FoodScoreBand: String, Codable, Equatable, Sendable {
+    case good = "Good"
+    case bad = "Bad"
+    case ugly = "Ugly"
+
+    static func classify(_ score: Int) -> FoodScoreBand {
+        switch score {
+        case 80...: .good
+        case 60...: .bad
+        default: .ugly
+        }
+    }
+}
+
 /// One row per calendar day. Source of truth for history/streaks; lives only
 /// in the main app's SwiftData store (widgets/extension read `TodaySnapshot` instead).
 @Model
@@ -89,6 +103,10 @@ final class DailyLog {
     /// Optional so existing SwiftData stores migrate without needing a value
     /// synthesized for rows written before food tracking existed.
     var foodEntries: [FoodEntry]?
+    /// Optional fields keep stores created before food scoring migratable.
+    var foodScore: Int?
+    var foodScoreSummary: String?
+    var foodScoreIsCurrent: Bool?
 
     init(dayKey: String, date: Date, waterGoalBottles: Int) {
         self.dayKey = dayKey
@@ -100,6 +118,9 @@ final class DailyLog {
         self.waterTimestamps = []
         self.checkIns = []
         self.foodEntries = []
+        self.foodScore = nil
+        self.foodScoreSummary = nil
+        self.foodScoreIsCurrent = true
     }
 
     var sleepGoalMet: Bool? {

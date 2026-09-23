@@ -23,6 +23,9 @@ final class BackupManagerTests: XCTestCase {
             assessment: "Balanced meal.",
             roast: nil
         )]
+        source.foodScore = 88
+        source.foodScoreSummary = "The vegetables have staged a competent intervention."
+        source.foodScoreIsCurrent = true
 
         let url = FileManager.default.temporaryDirectory
             .appending(path: "roastie-backup-\(UUID().uuidString).json")
@@ -41,6 +44,9 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertEqual(restored.waterTimestamps, source.waterTimestamps)
         XCTAssertEqual(restored.checkIns, source.checkIns)
         XCTAssertEqual(restored.foodEntries, source.foodEntries)
+        XCTAssertEqual(restored.foodScore, 88)
+        XCTAssertEqual(restored.foodScoreSummary, source.foodScoreSummary)
+        XCTAssertEqual(restored.foodScoreIsCurrent, true)
     }
 
     func testVersionOneBackupDefaultsToNoFoodEntries() throws {
@@ -70,5 +76,8 @@ final class BackupManagerTests: XCTestCase {
         BackupManager.restore(entry, into: restored)
 
         XCTAssertEqual(restored.foodEntries, [])
+        XCTAssertNil(restored.foodScore)
+        XCTAssertNil(restored.foodScoreSummary)
+        XCTAssertEqual(restored.foodScoreIsCurrent, false)
     }
 }
