@@ -1,71 +1,95 @@
 # Dr Jay
 
-Sleep + water accountability app for iPhone (iOS 26+). Checks in three times
-a day (morning / afternoon / night): did you get 6–9 hours of sleep, and are
-you hitting your water goal? If not, an on-device LLM — in the voice of a
-certain sarcastic diagnostician — roasts you. If you're on track, it (grudgingly)
-approves.
+Dr Jay is a private, on-device accountability app for iPhone (iOS 26+) that
+tracks sleep, water, and food—with praise when you deliver and a sharp roast
+when you do not.
 
-## Stack
+## What it tracks
 
-- SwiftUI + SwiftData (App Group–backed store for history/streaks)
-- **FoundationModels** (Apple Intelligence, on-device) generates the actual
-  roast/hype line, in a House-M.D.-style persona with three intensity levels
-  (gentle / playful / spicy) — with a curated local fallback bank if Apple
-  Intelligence isn't available on the device/region. See `Shared/RoastEngine.swift`.
-- Sleep has a guard rail both ways: under 6h *and* over 9h both get roasted,
-  just differently (`GoalCalculator.SleepStatus`).
-- Local check-in notifications contain plain status/progress from the latest
-  snapshot. They are rescheduled whenever the app refreshes or data changes;
-  the AI roast line stays in-app where there's room for it.
-- **ActivityKit** Live Activity (Dynamic Island + Lock Screen): live sleep/water
-  rings plus a Cleared/Flagged status per kind, no long text to get cut off.
-- **WidgetKit** home screen + lock screen widgets — same progress-only design.
-- **App Intents** for Siri: "Log a bottle to Dr Jay", "Log 1 hour of sleep to
-  Dr Jay" (bounded 15-min-to-12h duration picker so the amount can be spoken
-  in one phrase), plus status-check intents. See `Roastie/AppIntents/`.
-- HealthKit (read-only) to pull last night's sleep automatically, with a
-  manual add-sleep flow (additive, logged any time) as a fallback.
-- On-device JSON backup/export/import (Settings → Data), plus a reminder
-  notification the day before a free (non-paid) developer signing profile's
-  7-day trust window expires.
+- **Sleep:** a healthy range of 6–9 hours. Sleep can be read from HealthKit or
+  entered manually. A manual entry remains authoritative for the day unless
+  the user explicitly replaces it with Health data.
+- **Water:** progress toward a configurable full-day goal. Morning, afternoon,
+  and night check-ins judge whether the complete daily goal has been reached;
+  they do not estimate whether the user is "on pace."
+- **Food:** plain-language meal and snack entries are analyzed on device. An
+  unhealthy entry receives an immediate roast, while the Today screen rolls
+  all analyzed entries into an order-independent daily score:
+  **Good (80–100), Bad (60–79), or Ugly (0–59)**. Individual classifications
+  can be corrected or deleted from History.
+
+The Today screen keeps the current verdict concise. History contains the
+detailed daily record, food entries, corrections, and previous check-ins.
+Current and longest streaks count consecutive days on which both sleep and
+water goals were completed; food does not currently affect streaks.
+
+## Privacy and resilience
+
+- Health access is read-only.
+- Roasts and food analysis use Apple's Foundation Models on device; food logs
+  and health data are not sent to a server.
+- Sleep and water roasts use a curated local fallback bank when Apple
+  Intelligence is unavailable. Food remains logged but unscored until its
+  on-device analysis succeeds.
+- App data is stored locally with SwiftData in the shared App Group container.
+- JSON export/import in **Settings → Data** preserves sleep, water, food
+  entries, scores, and check-in history; streaks are rebuilt from those daily
+  logs after import. A backup leaves the app only when the user chooses to
+  share the exported file.
+
+## Platform features
+
+- **SwiftUI + SwiftData** for the app and App Group-backed history.
+- **FoundationModels** for on-device food analysis and Dr Jay's generated
+  roast or approval copy, with gentle, playful, and spicy intensity levels.
+- **HealthKit** for read-only sleep import.
+- **ActivityKit** for sleep and water progress on the Dynamic Island and Lock
+  Screen.
+- **WidgetKit** for sleep and water Home Screen and Lock Screen widgets.
+- **App Intents** for logging bottles or sleep and checking current status
+  through Siri.
+- Configurable morning, afternoon, and night local notifications. Their plain
+  status text reflects the most recent app snapshot available when scheduled.
 
 ## Setup
 
-1. Install **Xcode** (26+ SDK) and `brew install xcodegen` if you don't
-   already have it.
-2. Set your Apple Developer Team ID as an environment variable, then generate
-   the Xcode project (it's gitignored — regenerate it locally rather than
-   committing a project file with someone else's signing details baked in):
-   ```
+1. Install Xcode with the iOS 26+ SDK and install XcodeGen if needed:
+   `brew install xcodegen`.
+2. Generate the Xcode project with your Apple Developer Team ID:
+
+   ```sh
    DEVELOPMENT_TEAM=YOUR_TEAM_ID xcodegen generate
    ```
-   Re-run this any time you add/remove files, since the `.xcodeproj` is
-   generated from `project.yml`, not hand-edited.
-3. Open `Roastie.xcodeproj`. Bundle IDs are `dev.jeyanth.roastie` (+
-   `.widgets`) — change `bundleIdPrefix` in
-   `project.yml` for your own, then re-run `xcodegen generate`.
-4. Confirm the **App Groups** capability is picked up in each target's
-   Signing & Capabilities tab, using `group.dev.jeyanth.roastie` (must match
-   across both targets — already set in `project.yml`; update it
-   alongside the bundle ID prefix if you change that).
-5. Build & run the `Roastie` scheme on a real device. Live Activities,
-   Foundation Models, and App Intents all need a real device or a Simulator
-   with Apple Intelligence enabled (Settings → Apple Intelligence & Siri) —
-   Foundation Models silently falls back to the local line bank otherwise, so
-   the app still works either way.
 
-## Known caveats
+   `Roastie.xcodeproj` is generated from `project.yml` and intentionally
+   gitignored. Regenerate it after adding or removing source files.
+3. Open `Roastie.xcodeproj`. The default bundle IDs are
+   `dev.jeyanth.roastie` and `dev.jeyanth.roastie.widgets`. Change
+   `bundleIdPrefix` and the matching App Group in `project.yml` for another
+   developer account, then regenerate the project.
+4. Confirm both targets use the same App Group entitlement.
+5. Build and run the `Roastie` scheme on a real device with Apple Intelligence
+   enabled for the complete experience.
 
-- Local notification text reflects the most recent snapshot available when
-  the app scheduled it. iOS doesn't launch app code at local-notification
-  delivery time, so HealthKit changes made while the app remains closed won't
-  appear until the next app or background refresh.
-- `BGProcessingTaskRequest` timing is opportunistic (iOS decides when it
-  actually runs) — it's a backstop for day-rollover, not the primary
-  mechanism. The app also refreshes on every foreground.
-- A free (non-paid) Apple Developer account's signing trust expires 7 days
-  after install; export a backup in Settings before that happens if you're
-  not on a paid account, and import it after reinstalling.
-- Default goals: sleep 6–9h, water 4 bottles/day @ 750ml (both editable in
-  Settings).
+## Validation
+
+The project includes unit coverage for goal calculation, streaks, check-in
+window selection, snapshot migration, backup import, and food scoring. Compile
+the app and test bundle with:
+
+```sh
+xcodebuild -project Roastie.xcodeproj -scheme Roastie \
+  -configuration Debug -destination 'generic/platform=iOS' build-for-testing
+```
+
+## Known constraints
+
+- iOS does not run app code when a local notification is delivered. Its text
+  therefore uses the latest snapshot from the most recent foreground or
+  background refresh.
+- Background processing is opportunistic and acts as a day-rollover backstop;
+  foreground refresh remains the primary update path.
+- A free Apple Developer signing profile normally expires after seven days.
+  Export a JSON backup before reinstalling if persistent history matters.
+- Default goals are 6–9 hours of sleep and four 750 ml bottles of water; water
+  settings are configurable.

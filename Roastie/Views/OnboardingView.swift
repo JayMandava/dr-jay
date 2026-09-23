@@ -28,7 +28,7 @@ struct OnboardingView: View {
                 .padding(.horizontal)
 
             HStack(spacing: 6) {
-                ForEach(0..<4) { index in
+                ForEach(0..<5) { index in
                     Capsule()
                         .fill(index == step ? iconColor : Color.secondary.opacity(0.25))
                         .frame(width: index == step ? 18 : 6, height: 6)
@@ -38,7 +38,7 @@ struct OnboardingView: View {
 
             Spacer()
 
-            Button(step < 3 ? "Next" : "Let's go") {
+            Button(step < 4 ? "Next" : "Let's go") {
                 Task { await advance() }
             }
             .buttonStyle(.borderedProminent)
@@ -54,6 +54,7 @@ struct OnboardingView: View {
         case 0: "stethoscope"
         case 1: "moon.zzz.fill"
         case 2: "drop.fill"
+        case 3: "fork.knife"
         default: "bell.badge.fill"
         }
     }
@@ -63,6 +64,7 @@ struct OnboardingView: View {
         case 0: .indigo
         case 1: .indigo
         case 2: .cyan
+        case 3: .green
         default: .orange
         }
     }
@@ -72,21 +74,23 @@ struct OnboardingView: View {
         case 0: "Meet Dr Jay"
         case 1: "Sleep, checked 3x a day"
         case 2: "Water, checked 3x a day"
-        default: "One more thing"
+        case 3: "Food, judged instantly"
+        default: "Stay in the loop"
         }
     }
 
     private var subtitle: String {
         switch step {
-        case 0: "Dr Jay keeps you honest about sleep and water — with an on-device AI that hypes you up when you win and roasts you when you don't."
-        case 1: "Every morning, afternoon, and night, Dr Jay checks if you've hit your sleep window. Miss it, and you'll hear about it."
+        case 0: "Dr Jay keeps you honest about sleep, water, and food — with private, on-device intelligence and a bedside manner problem."
+        case 1: "Every morning, afternoon, and night, Dr Jay checks whether you landed in the healthy 6–9 hour range."
         case 2: "Log a bottle every time you finish one. Dr Jay keeps checking until you hit the full daily goal."
+        case 3: "Log what you ate in plain language. Unhealthy choices get an immediate roast, and your day earns a Good, Bad, or Ugly score."
         default: "Allow notifications so Dr Jay can actually check in on you."
         }
     }
 
     private func advance() async {
-        if step < 3 {
+        if step < 4 {
             step += 1
             return
         }

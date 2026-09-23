@@ -23,7 +23,7 @@ struct SettingsView: View {
                 }
 
                 Section("Sleep") {
-                    Text("Goal is fixed at 6 hours.")
+                    Text("Healthy range is fixed at 6–9 hours.")
                         .foregroundStyle(.secondary)
                     Toggle("Read sleep from Health", isOn: Binding(
                         get: { settings.healthKitEnabled },
@@ -122,6 +122,30 @@ struct SettingsView: View {
                     Text("A free (non-paid) developer install expires after 7 days. Export a backup before that happens, and import it after reinstalling to keep your history.")
                 }
 
+                Section("About") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Dr Jay", systemImage: "stethoscope")
+                            .font(.headline)
+                        Text("Sleep, water, and food accountability—with clinical honesty and an unhealthy amount of sarcasm.")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Private by design", systemImage: "lock.shield")
+                            .font(.headline)
+                        Text("Roasts and food analysis run on device. Health access is read-only, and your logs stay on this device unless you export a JSON backup.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    LabeledContent("Food score") {
+                        Text("Good 80–100 · Bad 60–79 · Ugly 0–59")
+                            .multilineTextAlignment(.trailing)
+                    }
+
+                    LabeledContent("Version", value: appVersion)
+                }
+
                 Section {
                     Button(role: .destructive) {
                         showResetConfirmation = true
@@ -154,7 +178,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This deletes all sleep and water history, your streak, and every setting. It can't be undone.")
+                Text("This deletes all sleep, water, and food history, your streak, and every setting. It can't be undone.")
             }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
                 switch result {
@@ -197,6 +221,14 @@ struct SettingsView: View {
         guard let expiry = AppConfig.provisioningExpiryDate else { return nil }
         let days = Calendar.current.dateComponents([.day], from: .now, to: expiry).day ?? 0
         return max(0, days)
+    }
+
+    private var appVersion: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        guard let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String else {
+            return version
+        }
+        return "\(version) (\(build))"
     }
 
     private func formattedHour(_ hour: Int) -> String {
