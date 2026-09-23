@@ -1,9 +1,8 @@
 import Foundation
 
 /// Thin, dependency-free read/write layer over the App Group UserDefaults suite.
-/// Used by the main app, the widget/Live Activity extension, and the
-/// notification service extension so all three agree on "today" without
-/// needing SwiftData in the lightweight extensions.
+/// Used by the main app and widget/Live Activity extension so both agree on
+/// "today" without needing SwiftData in the lightweight extension.
 enum SharedStore {
     static func loadSettings() -> AppSettings {
         guard let data = AppConfig.sharedDefaults.data(forKey: AppConfig.DefaultsKey.settings),

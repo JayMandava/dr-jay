@@ -2,10 +2,10 @@ import Foundation
 import UserNotifications
 
 /// Schedules the 6 repeating daily local notifications (sleep + water, x3
-/// check-in windows). Content is intentionally generic here — the
-/// notification service extension personalizes title/body with a
-/// freshly-generated roast/hype line right at delivery time, using whatever
-/// is logged by then.
+/// check-in windows). Local notifications cannot be modified by a notification
+/// service extension at delivery time, so each request is personalized from
+/// the latest shared snapshot when it is scheduled. `DayCoordinator` calls
+/// this again whenever that snapshot changes.
 enum NotificationManager {
 
     static func registerCategories() {
@@ -43,10 +43,28 @@ enum NotificationManager {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
 
+        let snapshot = SharedStore.loadSnapshot().flatMap {
+            $0.dayKey == Date().dayKey ? $0 : nil
+        }
+
         for window in CheckInWindow.allCases {
             let hour = settings.checkInHours[window] ?? window.defaultHour
-            await schedule(kind: .sleep, window: window, hour: hour, category: AppConfig.NotificationCategory.sleepCheck, title: "Sleep check-in", body: "Checking in on last night…")
-            await schedule(kind: .water, window: window, hour: hour, category: AppConfig.NotificationCategory.waterCheck, title: "Hydration check-in", body: "Checking your water pace…")
+            await schedule(
+                kind: .sleep,
+                window: window,
+                hour: hour,
+                category: AppConfig.NotificationCategory.sleepCheck,
+                settings: settings,
+                snapshot: snapshot
+            )
+            await schedule(
+                kind: .water,
+                window: window,
+                hour: hour,
+                category: AppConfig.NotificationCategory.waterCheck,
+                settings: settings,
+                snapshot: snapshot
+            )
         }
 
         await scheduleBackupReminder()
@@ -77,10 +95,17 @@ enum NotificationManager {
         try? await UNUserNotificationCenter.current().add(request)
     }
 
-    private static func schedule(kind: CheckKind, window: CheckInWindow, hour: Int, category: String, title: String, body: String) async {
+    private static func schedule(
+        kind: CheckKind,
+        window: CheckInWindow,
+        hour: Int,
+        category: String,
+        settings: AppSettings,
+        snapshot: TodaySnapshot?
+    ) async {
         let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
+        content.title = "\(window.label) check — \(kind == .sleep ? "Sleep" : "Water")"
+        content.body = statusBody(kind: kind, settings: settings, snapshot: snapshot)
         content.categoryIdentifier = category
         content.userInfo = [
             AppConfig.UserInfoKey.kind: kind.rawValue,
@@ -96,5 +121,26 @@ enum NotificationManager {
         let identifier = "\(kind.rawValue).\(window.rawValue)"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         try? await UNUserNotificationCenter.current().add(request)
+    }
+
+    private static func statusBody(kind: CheckKind, settings: AppSettings, snapshot: TodaySnapshot?) -> String {
+        switch kind {
+        case .sleep:
+            guard let hours = snapshot?.sleepHours else {
+                return "No sleep data yet — Pending."
+            }
+            let detail = GoalCalculator.sleepDetail(hours: hours)
+            return "\(capitalized(detail)) — \(GoalCalculator.sleepMet(hours: hours) ? "Cleared." : "Flagged.")"
+
+        case .water:
+            let bottlesLogged = snapshot?.waterBottlesLogged ?? 0
+            let goal = snapshot?.waterGoalBottles ?? settings.waterGoalBottles
+            let detail = GoalCalculator.waterDetail(bottlesLogged: bottlesLogged, goal: goal)
+            return "\(capitalized(detail)) — \(GoalCalculator.waterMet(bottlesLogged: bottlesLogged, goal: goal) ? "Cleared." : "Flagged.")"
+        }
+    }
+
+    private static func capitalized(_ value: String) -> String {
+        value.prefix(1).uppercased() + value.dropFirst()
     }
 }

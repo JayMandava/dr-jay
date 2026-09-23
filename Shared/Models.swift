@@ -91,7 +91,7 @@ final class DailyLog {
 }
 
 /// Cheap cross-process snapshot of "today" — written by the app/coordinator,
-/// read by widgets, the Live Activity, and the notification service extension.
+/// read by widgets, the Live Activity, App Intents, and notification scheduling.
 ///
 /// Sleep and water each keep their own latest message/verdict, so logging one
 /// never overwrites the other's status — both stay visible everywhere

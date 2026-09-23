@@ -21,7 +21,6 @@ struct RoastieApp: App {
             guard newPhase == .active else { return }
             Task {
                 await DayCoordinator.shared.refreshToday()
-                await NotificationManager.rescheduleAll(settings: settings)
                 appDelegate.scheduleDailyRefresh()
             }
         }

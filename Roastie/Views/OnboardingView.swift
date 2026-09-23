@@ -93,7 +93,6 @@ struct OnboardingView: View {
         _ = await NotificationManager.requestAuthorization()
         settings.onboardingComplete = true
         SharedStore.save(settings)
-        await NotificationManager.rescheduleAll(settings: settings)
         await DayCoordinator.shared.refreshToday()
     }
 }

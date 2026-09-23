@@ -294,6 +294,7 @@ final class DayCoordinator {
         )
         SharedStore.save(snapshot)
         WidgetCenter.shared.reloadAllTimelines()
+        await NotificationManager.rescheduleAll(settings: settings)
     }
 
     private func nextCheckInLabel(settings: AppSettings) -> String {

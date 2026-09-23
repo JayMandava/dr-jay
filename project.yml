@@ -52,8 +52,6 @@ targets:
     dependencies:
       - target: RoastieWidgets
         embed: true
-      - target: RoastieNotificationService
-        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jeyanth.roastie
@@ -85,38 +83,12 @@ targets:
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
 
-  RoastieNotificationService:
-    type: app-extension
-    platform: iOS
-    sources:
-      - path: RoastieNotificationService
-      - path: Shared
-    info:
-      path: RoastieNotificationService/Info.plist
-      properties:
-        CFBundleDisplayName: Dr Jay Notifications
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.usernotifications.service
-          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
-    entitlements:
-      path: RoastieNotificationService/RoastieNotificationService.entitlements
-      properties:
-        com.apple.security.application-groups:
-          - group.dev.jeyanth.roastie
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: dev.jeyanth.roastie.notificationservice
-        SKIP_INSTALL: NO
-        MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
-
 schemes:
   Roastie:
     build:
       targets:
         Roastie: all
         RoastieWidgets: all
-        RoastieNotificationService: all
     run:
       config: Debug
     archive:
