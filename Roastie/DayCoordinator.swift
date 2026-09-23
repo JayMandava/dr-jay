@@ -68,6 +68,7 @@ final class DayCoordinator {
     /// sleep from HealthKit (if enabled), recomputes the snapshot, and syncs
     /// the Live Activity.
     func refreshToday() async {
+        migrateLegacyFoodCorrectionsIfNeeded()
         let log = todayLog()
         let settings = SharedStore.loadSettings()
 
@@ -154,6 +155,13 @@ final class DayCoordinator {
         let text = description.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
 
+        migrateLegacyFoodCorrectionsIfNeeded()
+        let memories = SharedStore.loadFoodCorrectionMemories()
+        let exactMemory = FoodMemoryMatcher.exactMatch(for: text, in: memories)
+        let relatedMemories = exactMemory == nil
+            ? FoodMemoryMatcher.relatedMatches(for: text, in: memories)
+            : []
+
         let log = todayLog()
         var entry = FoodEntry(
             text: text,
@@ -170,7 +178,12 @@ final class DayCoordinator {
         persistBackup()
 
         let settings = SharedStore.loadSettings()
-        guard let assessment = await FoodAnalyzer.analyze(text, intensity: settings.roastIntensity) else {
+        guard let assessment = await FoodAnalyzer.analyze(
+            text,
+            intensity: settings.roastIntensity,
+            exactMemory: exactMemory,
+            relatedMemories: relatedMemories
+        ) else {
             log.foodScoreIsCurrent = true
             log.foodScoreVersion = FoodScoreCalculator.version
             saveContext(operation: "Record unavailable food assessment")
@@ -182,6 +195,7 @@ final class DayCoordinator {
         entry.assessment = assessment.explanation
         entry.roast = assessment.roast
         entry.qualityScore = assessment.qualityScore
+        entry.usedCorrectionMemory = exactMemory != nil
         replaceFoodEntry(entry, in: log)
         saveContext(operation: "Save food assessment")
         persistBackup()
@@ -197,16 +211,27 @@ final class DayCoordinator {
         guard verdict != .unanalyzed,
               let log = log(for: dayKey),
               var entries = log.foodEntries,
-              let index = entries.firstIndex(where: { $0.id == entryID })
+              let index = entries.firstIndex(where: { $0.id == entryID }),
+              entries[index].verdict != verdict
         else { return }
 
         entries[index].verdict = verdict
-        entries[index].assessment = "Marked manually."
+        entries[index].assessment = FoodMemoryStore.manualAssessment
         entries[index].qualityScore = FoodScoreCalculator.defaultScore(for: verdict)
+        entries[index].wasManuallyCorrected = true
+        entries[index].usedCorrectionMemory = false
         if verdict == .healthy {
             entries[index].roast = nil
         }
         log.foodEntries = entries
+
+        let memories = FoodMemoryStore.upserting(
+            food: entries[index].text,
+            verdict: verdict,
+            at: .now,
+            in: SharedStore.loadFoodCorrectionMemories()
+        )
+        SharedStore.saveFoodCorrectionMemories(memories)
         invalidateFoodScore(for: log)
         saveContext(operation: "Correct food verdict")
         persistBackup()
@@ -221,6 +246,13 @@ final class DayCoordinator {
         saveContext(operation: "Delete food entry")
         persistBackup()
         await refreshFoodScore(for: log, intensity: SharedStore.loadSettings().roastIntensity)
+    }
+
+    func forgetFoodCorrectionMemory(id: UUID) {
+        var memories = SharedStore.loadFoodCorrectionMemories()
+        memories.removeAll { $0.id == id }
+        SharedStore.saveFoodCorrectionMemories(memories)
+        persistBackup()
     }
 
     private func replaceFoodEntry(_ entry: FoodEntry, in log: DailyLog) {
@@ -364,6 +396,8 @@ final class DayCoordinator {
 
         AppConfig.sharedDefaults.removeObject(forKey: AppConfig.DefaultsKey.snapshot)
         AppConfig.sharedDefaults.removeObject(forKey: AppConfig.DefaultsKey.settings)
+        AppConfig.sharedDefaults.removeObject(forKey: AppConfig.DefaultsKey.foodCorrectionMemories)
+        AppConfig.sharedDefaults.removeObject(forKey: AppConfig.DefaultsKey.foodMemoryMigrationVersion)
         AppConfig.sharedDefaults.removeObject(forKey: AppConfig.DefaultsKey.activityDayKey)
 
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
@@ -392,7 +426,10 @@ final class DayCoordinator {
     /// reinstall's "Import" restores from.
     func writeBackupNow() throws {
         let logs = try context.fetch(FetchDescriptor<DailyLog>())
-        try BackupManager.write(logs)
+        try BackupManager.write(
+            logs,
+            foodCorrectionMemories: SharedStore.loadFoodCorrectionMemories()
+        )
     }
 
     private func persistBackup() {
@@ -400,6 +437,36 @@ final class DayCoordinator {
             try writeBackupNow()
         } catch {
             AppLogger.report(error, operation: "Persist automatic backup", logger: AppLogger.backup)
+        }
+    }
+
+    /// Promotes corrections made before food memory shipped into the durable
+    /// memory store exactly once. The version marker prevents a deliberately
+    /// forgotten memory from being recreated from an old history row.
+    private func migrateLegacyFoodCorrectionsIfNeeded() {
+        let version = AppConfig.sharedDefaults.integer(
+            forKey: AppConfig.DefaultsKey.foodMemoryMigrationVersion
+        )
+        guard version < 1 else { return }
+
+        do {
+            let logs = try context.fetch(FetchDescriptor<DailyLog>())
+            var entries: [FoodEntry] = []
+            for log in logs {
+                entries.append(contentsOf: log.foodEntries ?? [])
+            }
+            let inferred = FoodMemoryStore.inferred(from: entries)
+            let merged = FoodMemoryStore.merging(
+                existing: SharedStore.loadFoodCorrectionMemories(),
+                imported: inferred
+            )
+            SharedStore.saveFoodCorrectionMemories(merged)
+            AppConfig.sharedDefaults.set(
+                1,
+                forKey: AppConfig.DefaultsKey.foodMemoryMigrationVersion
+            )
+        } catch {
+            AppLogger.report(error, operation: "Migrate legacy food corrections", logger: AppLogger.persistence)
         }
     }
 
@@ -422,6 +489,21 @@ final class DayCoordinator {
 
             BackupManager.restore(entry, into: log)
         }
+
+        let importedMemories = payload.foodCorrectionMemories
+            ?? FoodMemoryStore.inferred(from: payload.logs)
+        let mergedMemories = FoodMemoryStore.merging(
+            existing: SharedStore.loadFoodCorrectionMemories(),
+            imported: importedMemories
+        )
+        SharedStore.saveFoodCorrectionMemories(mergedMemories)
+        // Import has already restored or inferred every available memory.
+        // Mark migration complete so an intentionally forgotten v5 memory
+        // is not recreated from its historical manually corrected row.
+        AppConfig.sharedDefaults.set(
+            1,
+            forKey: AppConfig.DefaultsKey.foodMemoryMigrationVersion
+        )
 
         try context.save()
         await refreshToday()

@@ -58,13 +58,25 @@ enum FoodScoreCalculator {
 /// device. An unavailable model returns nil so the caller can preserve the
 /// entry as explicitly unanalyzed rather than guessing.
 enum FoodAnalyzer {
-    static func analyze(_ food: String, intensity: RoastIntensity) async -> FoodAssessment? {
+    static func analyze(
+        _ food: String,
+        intensity: RoastIntensity,
+        exactMemory: FoodCorrectionMemory? = nil,
+        relatedMemories: [FoodCorrectionMemory] = []
+    ) async -> FoodAssessment? {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
-            return await analyzeOnDevice(food, intensity: intensity)
+            if let result = await analyzeOnDevice(
+                food,
+                intensity: intensity,
+                exactMemory: exactMemory,
+                relatedMemories: relatedMemories
+            ) {
+                return result
+            }
         }
         #endif
-        return nil
+        return exactMemory.map { rememberedAssessment(for: $0, intensity: intensity) }
     }
 
     static func scoreDay(
@@ -91,7 +103,9 @@ enum FoodAnalyzer {
     @available(iOS 26.0, *)
     private static func analyzeOnDevice(
         _ food: String,
-        intensity: RoastIntensity
+        intensity: RoastIntensity,
+        exactMemory: FoodCorrectionMemory?,
+        relatedMemories: [FoodCorrectionMemory]
     ) async -> FoodAssessment? {
         guard case .available = SystemLanguageModel.default.availability else {
             return nil
@@ -100,21 +114,32 @@ enum FoodAnalyzer {
         let session = LanguageModelSession(instructions: entryInstructions(intensity: intensity))
         do {
             let response = try await session.respond(
-                to: "Food eaten: \(food)",
+                to: entryPrompt(
+                    food: food,
+                    exactMemory: exactMemory,
+                    relatedMemories: relatedMemories
+                ),
                 generating: GeneratedFoodAssessment.self
             )
-            let verdict: FoodVerdict = response.content.isHealthy ? .healthy : .unhealthy
+            let verdict = exactMemory?.verdict
+                ?? (response.content.isHealthy ? FoodVerdict.healthy : FoodVerdict.unhealthy)
+            let candidateScore = exactMemory.flatMap { FoodScoreCalculator.defaultScore(for: $0.verdict) }
+                ?? response.content.qualityScore
             guard let qualityScore = FoodScoreCalculator.normalized(
-                response.content.qualityScore,
+                candidateScore,
                 for: verdict
             ) else { return nil }
 
-            let explanation = clean(response.content.explanation)
+            let explanation = exactMemory == nil
+                ? clean(response.content.explanation)
+                : FoodMemoryStore.rememberedAssessment
             let roast = clean(response.content.roast)
             return FoodAssessment(
                 verdict: verdict,
                 explanation: explanation,
-                roast: verdict == .healthy || roast.isEmpty ? nil : roast,
+                roast: verdict == .healthy
+                    ? nil
+                    : (roast.isEmpty ? fallbackRoast(intensity: intensity) : roast),
                 qualityScore: qualityScore
             )
         } catch {
@@ -167,7 +192,31 @@ enum FoodAnalyzer {
         under 140 characters targeting the food choice—not the user's body, weight, worth, or eating
         habits. No diagnosis, eating-disorder language, profanity, emoji, quotation marks, or hashtags.
         If healthy, return an empty roast.
+
+        A prompt may include an exact saved correction and semantically related corrections from
+        this user. An exact saved correction is authoritative. Related corrections are examples
+        only: apply one only when it is genuinely the same food, and preserve meaningful modifiers
+        such as fried, grilled, sweetened, or unsweetened.
         """
+    }
+
+    @available(iOS 26.0, *)
+    private static func entryPrompt(
+        food: String,
+        exactMemory: FoodCorrectionMemory?,
+        relatedMemories: [FoodCorrectionMemory]
+    ) -> String {
+        var sections = ["Food eaten: \(food)"]
+        if let exactMemory {
+            sections.append("Exact saved user correction: \(exactMemory.verdict.label)")
+        }
+        if !relatedMemories.isEmpty {
+            let examples = relatedMemories.map {
+                "- \($0.displayText): \($0.verdict.label)"
+            }.joined(separator: "\n")
+            sections.append("Possibly related user corrections (examples only):\n\(examples)")
+        }
+        return sections.joined(separator: "\n\n")
     }
 
     @available(iOS 26.0, *)
@@ -217,6 +266,29 @@ enum FoodAnalyzer {
 
     private static func clean(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func rememberedAssessment(
+        for memory: FoodCorrectionMemory,
+        intensity: RoastIntensity
+    ) -> FoodAssessment {
+        FoodAssessment(
+            verdict: memory.verdict,
+            explanation: FoodMemoryStore.rememberedAssessment,
+            roast: memory.verdict == .unhealthy ? fallbackRoast(intensity: intensity) : nil,
+            qualityScore: FoodScoreCalculator.defaultScore(for: memory.verdict) ?? 0
+        )
+    }
+
+    private static func fallbackRoast(intensity: RoastIntensity) -> String {
+        switch intensity {
+        case .gentle:
+            "We discussed this food already. The prognosis remains unimpressive."
+        case .playful:
+            "Same food, same verdict. Repetition isn't a nutritional defense."
+        case .spicy:
+            "You brought back the same dietary crime and expected a new diagnosis."
+        }
     }
 
     @available(iOS 26.0, *)

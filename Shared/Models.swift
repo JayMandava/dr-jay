@@ -75,6 +75,9 @@ struct FoodEntry: Codable, Hashable, Identifiable, Sendable {
     /// Per-entry nutrition quality used to build an order-independent daily score.
     /// Optional so entries written before scoring v2 continue to decode.
     var qualityScore: Int? = nil
+    /// Optional migration fields keep entries from older stores/backups decodable.
+    var wasManuallyCorrected: Bool? = nil
+    var usedCorrectionMemory: Bool? = nil
 }
 
 enum FoodScoreBand: String, Codable, Equatable, Sendable {

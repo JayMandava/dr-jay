@@ -10,7 +10,7 @@ import Foundation
 /// reinstall, a new device, or just wanting your history in a plain file.
 enum BackupManager {
     private static let fileName = "dr-jay-backup.json"
-    private static let currentVersion = 4
+    private static let currentVersion = 5
 
     enum BackupError: LocalizedError {
         case unsupportedVersion(Int)
@@ -45,6 +45,9 @@ enum BackupManager {
         var version: Int
         var exportedAt: Date
         var logs: [DailyLogExport]
+        /// Optional keeps version 1–4 backups decodable. For those versions,
+        /// memories can be inferred from manually corrected food entries.
+        var foodCorrectionMemories: [FoodCorrectionMemory]?
     }
 
     static var fileURL: URL {
@@ -55,7 +58,11 @@ enum BackupManager {
 
     /// Rewrites the backup file from the current set of logs. Cheap enough
     /// for a personal app's data volume to just do a full rewrite each time.
-    static func write(_ logs: [DailyLog], to url: URL = fileURL) throws {
+    static func write(
+        _ logs: [DailyLog],
+        foodCorrectionMemories: [FoodCorrectionMemory] = [],
+        to url: URL = fileURL
+    ) throws {
         let payload = BackupPayload(
             version: currentVersion,
             exportedAt: .now,
@@ -75,7 +82,8 @@ enum BackupManager {
                     foodScoreIsCurrent: $0.foodScoreIsCurrent,
                     foodScoreVersion: $0.foodScoreVersion
                 )
-            }
+            },
+            foodCorrectionMemories: foodCorrectionMemories
         )
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

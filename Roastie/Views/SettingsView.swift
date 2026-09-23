@@ -71,6 +71,16 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink {
+                        FoodMemoriesView()
+                    } label: {
+                        Label("Food Memories", systemImage: "brain.head.profile")
+                    }
+                } footer: {
+                    Text("Corrections teach Dr Jay how to classify the same food next time. Everything stays on device.")
+                }
+
+                Section {
                     if let daysRemaining {
                         Label(
                             daysRemaining <= 0
@@ -119,7 +129,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Data")
                 } footer: {
-                    Text("A free (non-paid) developer install expires after 7 days. Export a backup before that happens, and import it after reinstalling to keep your history.")
+                    Text("A free (non-paid) developer install expires after 7 days. Export a backup before that happens, and import it after reinstalling to keep your history and learned food corrections.")
                 }
 
                 Section("About") {
@@ -133,7 +143,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Private by design", systemImage: "lock.shield")
                             .font(.headline)
-                        Text("Roasts and food analysis run on device. Health access is read-only, and your logs stay on this device unless you export a JSON backup.")
+                        Text("Roasts, food analysis, and learned corrections stay on device. Health access is read-only, and data leaves only when you export a JSON backup.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -158,7 +168,7 @@ struct SettingsView: View {
                     }
                     .disabled(isResetting)
                 } footer: {
-                    Text("Erases all logged history, streaks, and settings, and starts onboarding over. This can't be undone.")
+                    Text("Erases all logged history, learned food corrections, streaks, and settings, and starts onboarding over. This can't be undone.")
                 }
             }
             .navigationTitle("Settings")
@@ -178,7 +188,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This deletes all sleep, water, and food history, your streak, and every setting. It can't be undone.")
+                Text("This deletes all sleep, water, and food history, learned food corrections, your streak, and every setting. It can't be undone.")
             }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
                 switch result {

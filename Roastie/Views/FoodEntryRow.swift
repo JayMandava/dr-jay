@@ -32,6 +32,12 @@ struct FoodEntryRow: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                if entry.usedCorrectionMemory == true {
+                    Label("Remembered", systemImage: "brain.head.profile")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.indigo)
+                }
             }
 
             Spacer(minLength: 4)

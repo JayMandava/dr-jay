@@ -31,6 +31,8 @@ enum AppConfig {
     enum DefaultsKey {
         static let snapshot = "today.snapshot"
         static let settings = "app.settings"
+        static let foodCorrectionMemories = "food.correctionMemories"
+        static let foodMemoryMigrationVersion = "food.memoryMigrationVersion"
         static let activityDayKey = "liveactivity.dayKey"
         static let installDate = "app.installDate"
     }

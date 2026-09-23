@@ -46,4 +46,25 @@ enum SharedStore {
             AppLogger.report(error, operation: "Encode snapshot", logger: AppLogger.sharedStore)
         }
     }
+
+    static func loadFoodCorrectionMemories() -> [FoodCorrectionMemory] {
+        guard let data = AppConfig.sharedDefaults.data(forKey: AppConfig.DefaultsKey.foodCorrectionMemories) else {
+            return []
+        }
+        do {
+            return try JSONDecoder().decode([FoodCorrectionMemory].self, from: data)
+        } catch {
+            AppLogger.report(error, operation: "Decode food correction memories", logger: AppLogger.sharedStore)
+            return []
+        }
+    }
+
+    static func saveFoodCorrectionMemories(_ memories: [FoodCorrectionMemory]) {
+        do {
+            let data = try JSONEncoder().encode(memories)
+            AppConfig.sharedDefaults.set(data, forKey: AppConfig.DefaultsKey.foodCorrectionMemories)
+        } catch {
+            AppLogger.report(error, operation: "Encode food correction memories", logger: AppLogger.sharedStore)
+        }
+    }
 }

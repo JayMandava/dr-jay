@@ -28,13 +28,21 @@ final class BackupManagerTests: XCTestCase {
         source.foodScoreSummary = "The vegetables have staged a competent intervention."
         source.foodScoreIsCurrent = true
         source.foodScoreVersion = FoodScoreCalculator.version
+        let memory = FoodCorrectionMemory(
+            normalizedText: "vegetable dosa",
+            displayText: "Vegetable dosa",
+            verdict: .healthy,
+            correctedAt: TestSupport.date(23, hour: 10),
+            confirmationCount: 1
+        )
 
         let url = FileManager.default.temporaryDirectory
             .appending(path: "roastie-backup-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: url) }
 
-        try BackupManager.write([source], to: url)
-        let entry = try XCTUnwrap(BackupManager.read(from: url).logs.first)
+        try BackupManager.write([source], foodCorrectionMemories: [memory], to: url)
+        let payload = try BackupManager.read(from: url)
+        let entry = try XCTUnwrap(payload.logs.first)
         let restored = DailyLog(dayKey: entry.dayKey, date: .distantPast, waterGoalBottles: 1)
         BackupManager.restore(entry, into: restored)
 
@@ -50,6 +58,7 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertEqual(restored.foodScoreSummary, source.foodScoreSummary)
         XCTAssertEqual(restored.foodScoreIsCurrent, true)
         XCTAssertEqual(restored.foodScoreVersion, FoodScoreCalculator.version)
+        XCTAssertEqual(payload.foodCorrectionMemories, [memory])
     }
 
     func testVersionOneBackupDefaultsToNoFoodEntries() throws {
@@ -74,7 +83,8 @@ final class BackupManagerTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
         try Data(json.utf8).write(to: url)
 
-        let entry = try XCTUnwrap(BackupManager.read(from: url).logs.first)
+        let payload = try BackupManager.read(from: url)
+        let entry = try XCTUnwrap(payload.logs.first)
         let restored = DailyLog(dayKey: entry.dayKey, date: .distantPast, waterGoalBottles: 1)
         BackupManager.restore(entry, into: restored)
 
@@ -83,5 +93,43 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertNil(restored.foodScoreSummary)
         XCTAssertEqual(restored.foodScoreIsCurrent, false)
         XCTAssertNil(restored.foodScoreVersion)
+        XCTAssertNil(payload.foodCorrectionMemories)
+    }
+
+    func testVersionFourBackupInfersManualCorrectionMemory() throws {
+        let json = """
+        {
+          "version": 4,
+          "exportedAt": "2026-09-23T12:00:00Z",
+          "logs": [{
+            "dayKey": "2026-09-23",
+            "date": "2026-09-23T00:00:00Z",
+            "sleepSource": "unknown",
+            "waterGoalBottles": 4,
+            "waterBottlesLogged": 0,
+            "waterTimestamps": [],
+            "checkIns": [],
+            "foodEntries": [{
+              "id": "7D81F9C9-DBD4-42AF-972E-C33C11B94D88",
+              "text": "Paneer tikka",
+              "timestamp": "2026-09-23T10:00:00Z",
+              "verdict": "healthy",
+              "assessment": "Marked manually."
+            }]
+          }]
+        }
+        """
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "roastie-v4-backup-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try Data(json.utf8).write(to: url)
+
+        let payload = try BackupManager.read(from: url)
+        let inferred = FoodMemoryStore.inferred(from: payload.logs)
+
+        XCTAssertNil(payload.foodCorrectionMemories)
+        XCTAssertEqual(inferred.count, 1)
+        XCTAssertEqual(inferred.first?.normalizedText, "paneer tikka")
+        XCTAssertEqual(inferred.first?.verdict, .healthy)
     }
 }

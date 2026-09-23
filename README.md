@@ -16,7 +16,9 @@ when you do not.
   unhealthy entry receives an immediate roast, while the Today screen rolls
   all analyzed entries into an order-independent daily score:
   **Good (80–100), Bad (60–79), or Ugly (0–59)**. Individual classifications
-  can be corrected or deleted from History.
+  can be corrected or deleted from History. A correction becomes private
+  local memory: exact future matches use it automatically, while similar
+  foods receive it only as context for a fresh assessment.
 
 The Today screen keeps the current verdict concise. History contains the
 detailed daily record, food entries, corrections, and previous check-ins.
@@ -33,9 +35,10 @@ water goals were completed; food does not currently affect streaks.
   on-device analysis succeeds.
 - App data is stored locally with SwiftData in the shared App Group container.
 - JSON export/import in **Settings → Data** preserves sleep, water, food
-  entries, scores, and check-in history; streaks are rebuilt from those daily
-  logs after import. A backup leaves the app only when the user chooses to
-  share the exported file.
+  entries, scores, learned food corrections, and check-in history; streaks are
+  rebuilt from those daily logs after import. Version 1–4 backups remain
+  compatible and manual food corrections are recovered where possible. A
+  backup leaves the app only when the user chooses to share the exported file.
 
 ## Platform features
 
