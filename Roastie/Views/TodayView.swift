@@ -84,13 +84,6 @@ struct TodayView: View {
                     }
                     .font(.subheadline.weight(.semibold))
 
-                    StepCountCard(
-                        stepCount: stepCount,
-                        isLoading: isLoadingSteps,
-                        loadFinished: stepLoadFinished,
-                        onConnect: connectSteps
-                    )
-
                     FoodScoreCard(
                         score: today?.foodScore,
                         summary: today?.foodScoreSummary,
@@ -100,6 +93,13 @@ struct TodayView: View {
                             Haptics.tap()
                             showFoodSheet = true
                         }
+                    )
+
+                    StepCountCard(
+                        stepCount: stepCount,
+                        isLoading: isLoadingSteps,
+                        loadFinished: stepLoadFinished,
+                        onConnect: connectSteps
                     )
 
                     if Calendar.current.component(.hour, from: .now) >= 22 {
