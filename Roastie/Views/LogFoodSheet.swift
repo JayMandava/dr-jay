@@ -71,7 +71,7 @@ struct LogFoodSheet: View {
                 }
             }
             .onAppear { isFocused = true }
-            .tint(DrJayTheme.clinicalBlue)
+            .tint(DrJayTheme.primary)
         }
         .interactiveDismissDisabled(isLogging)
         .presentationDetents([.medium])

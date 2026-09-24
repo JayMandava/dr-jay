@@ -2,67 +2,83 @@ import SwiftUI
 import UIKit
 
 enum DrJayTheme {
-    static let clinicalBlue = adaptive(
-        light: (43, 76, 111),
-        dark: (164, 194, 244),
-        highContrastLight: (25, 55, 88),
-        highContrastDark: (192, 214, 250)
+    // Pantone Color of the Year “Light & Shadow” palette, adapted for
+    // legibility in light, dark, and increased-contrast appearances.
+    static let primary = adaptive( // Blue Fusion
+        light: (79, 106, 124),
+        dark: (126, 164, 187),
+        highContrastLight: (48, 76, 96),
+        highContrastDark: (159, 194, 214)
     )
 
-    static let frostBlue = adaptive(
-        light: (111, 151, 201),
-        dark: (133, 174, 226),
-        highContrastLight: (69, 112, 165),
-        highContrastDark: (176, 207, 247)
+    static let sleep = adaptive( // Quiet Violet
+        light: (158, 137, 166),
+        dark: (193, 174, 199),
+        highContrastLight: (112, 88, 123),
+        highContrastDark: (220, 202, 225)
     )
 
-    static let amber = adaptive(
-        light: (212, 122, 55),
-        dark: (240, 160, 92),
-        highContrastLight: (164, 77, 19),
-        highContrastDark: (255, 185, 116)
+    static let water = adaptive( // Baltic Sea
+        light: (91, 158, 192),
+        dark: (125, 190, 219),
+        highContrastLight: (43, 112, 151),
+        highContrastDark: (157, 212, 235)
     )
 
-    static let earth = adaptive(
-        light: (122, 107, 93),
-        dark: (181, 164, 148),
-        highContrastLight: (84, 71, 59),
-        highContrastDark: (210, 194, 178)
+    static let roast = adaptive( // Golden Mist, deepened where used as text
+        light: (143, 124, 53),
+        dark: (222, 210, 145),
+        highContrastLight: (105, 88, 24),
+        highContrastDark: (240, 229, 164)
     )
 
-    static let charcoal = adaptive(
-        light: (34, 34, 34),
-        dark: (242, 242, 242),
-        highContrastLight: (16, 16, 16),
-        highContrastDark: (255, 255, 255)
+    static let goldenMist = adaptive(
+        light: (216, 204, 143),
+        dark: (222, 210, 145),
+        highContrastLight: (143, 124, 53),
+        highContrastDark: (240, 229, 164)
     )
 
-    static let canvas = adaptive(
-        light: (239, 243, 247),
-        dark: (19, 23, 27),
+    static let veiledVista = adaptive(
+        light: (198, 222, 198),
+        dark: (159, 194, 161),
+        highContrastLight: (124, 157, 126),
+        highContrastDark: (189, 218, 190)
+    )
+
+    static let muted = adaptive( // Hematite
+        light: (122, 116, 112),
+        dark: (181, 176, 172),
+        highContrastLight: (79, 74, 70),
+        highContrastDark: (213, 208, 204)
+    )
+
+    static let canvas = adaptive( // Cloud Dancer
+        light: (240, 239, 235),
+        dark: (28, 29, 30),
         highContrastLight: (255, 255, 255),
-        highContrastDark: (0, 0, 0)
+        highContrastDark: (14, 14, 15)
     )
 
     static let surface = adaptive(
-        light: (250, 251, 252),
-        dark: (34, 38, 43),
+        light: (250, 249, 246),
+        dark: (43, 43, 44),
         highContrastLight: (255, 255, 255),
-        highContrastDark: (25, 25, 25)
+        highContrastDark: (31, 31, 32)
     )
 
-    static let outline = adaptive(
-        light: (204, 213, 222),
-        dark: (69, 77, 86),
-        highContrastLight: (133, 145, 157),
-        highContrastDark: (125, 133, 142)
+    static let outline = adaptive( // Cloud Cover
+        light: (163, 157, 158),
+        dark: (105, 101, 102),
+        highContrastLight: (115, 109, 110),
+        highContrastDark: (151, 146, 147)
     )
 
-    static let ugly = adaptive(
-        light: (164, 52, 52),
-        dark: (244, 123, 116),
-        highContrastLight: (120, 21, 21),
-        highContrastDark: (255, 151, 143)
+    static let ugly = adaptive( // Hematite
+        light: (101, 86, 82),
+        dark: (196, 178, 173),
+        highContrastLight: (65, 50, 47),
+        highContrastDark: (225, 207, 201)
     )
 
     private static func adaptive(

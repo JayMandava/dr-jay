@@ -88,7 +88,7 @@ struct SettingsView: View {
                                 : "Expires in \(daysRemaining) day\(daysRemaining == 1 ? "" : "s")",
                             systemImage: "clock.badge.exclamationmark"
                         )
-                        .foregroundStyle(daysRemaining <= 2 ? DrJayTheme.amber : Color.secondary)
+                        .foregroundStyle(daysRemaining <= 2 ? DrJayTheme.roast : Color.secondary)
                     }
 
                     Button {
@@ -235,7 +235,7 @@ struct SettingsView: View {
                     }
                 }
             }
-            .tint(DrJayTheme.clinicalBlue)
+            .tint(DrJayTheme.primary)
         }
     }
 

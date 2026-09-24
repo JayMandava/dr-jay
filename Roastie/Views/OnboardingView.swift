@@ -66,7 +66,7 @@ struct OnboardingView: View {
     }
 
     private var iconColor: Color {
-        step == 4 ? DrJayTheme.amber : DrJayTheme.clinicalBlue
+        step == 4 ? DrJayTheme.roast : DrJayTheme.primary
     }
 
     private var title: String {

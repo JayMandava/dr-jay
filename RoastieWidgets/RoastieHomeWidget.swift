@@ -79,19 +79,19 @@ struct RoastieWidgetView: View {
 
     private func statusRow(icon: String, wasRoast: Bool, value: String) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon).foregroundStyle(wasRoast ? DrJayTheme.amber : DrJayTheme.clinicalBlue)
+            Image(systemName: icon).foregroundStyle(wasRoast ? DrJayTheme.roast : DrJayTheme.primary)
             Text(value).font(.caption.weight(.semibold))
             Spacer(minLength: 4)
             Image(systemName: wasRoast ? "exclamationmark.triangle.fill" : "checkmark.seal.fill")
                 .font(.caption2)
-                .foregroundStyle(wasRoast ? DrJayTheme.amber : DrJayTheme.clinicalBlue)
+                .foregroundStyle(wasRoast ? DrJayTheme.roast : DrJayTheme.primary)
         }
     }
 
     private func statusChip(wasRoast: Bool, label: String) -> some View {
         Label(label, systemImage: wasRoast ? "exclamationmark.triangle.fill" : "checkmark.seal.fill")
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(wasRoast ? DrJayTheme.amber : DrJayTheme.clinicalBlue)
+            .foregroundStyle(wasRoast ? DrJayTheme.roast : DrJayTheme.primary)
     }
 
     private var sleepLabel: String {
@@ -100,8 +100,8 @@ struct RoastieWidgetView: View {
 
     private var rings: some View {
         HStack(spacing: 10) {
-            miniRing(progress: snapshot.sleepProgress, color: DrJayTheme.clinicalBlue, icon: "moon.zzz.fill")
-            miniRing(progress: snapshot.waterProgress, color: DrJayTheme.frostBlue, icon: "drop.fill")
+            miniRing(progress: snapshot.sleepProgress, color: DrJayTheme.sleep, icon: "moon.zzz.fill")
+            miniRing(progress: snapshot.waterProgress, color: DrJayTheme.water, icon: "drop.fill")
         }
     }
 

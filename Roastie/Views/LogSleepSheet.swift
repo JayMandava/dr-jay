@@ -31,10 +31,10 @@ struct LogSleepSheet: View {
                         .monospacedDigit()
                         .contentTransition(.numericText())
                         .animation(.snappy, value: amount)
-                        .foregroundStyle(DrJayTheme.clinicalBlue)
+                        .foregroundStyle(DrJayTheme.sleep)
 
                     Slider(value: $amount, in: 0.5...12, step: 0.5)
-                        .tint(DrJayTheme.clinicalBlue)
+                        .tint(DrJayTheme.sleep)
                         .padding(.horizontal, 32)
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 56), spacing: 10)], spacing: 10) {
@@ -96,7 +96,7 @@ struct LogSleepSheet: View {
                 )
             }
             .buttonStyle(.glass)
-            .tint(DrJayTheme.clinicalBlue)
+            .tint(DrJayTheme.primary)
             .disabled(isReplacingFromHealth)
 
             if let healthKitError {
@@ -119,6 +119,6 @@ struct LogSleepSheet: View {
                 .frame(minWidth: 40)
         }
         .buttonStyle(.bordered)
-        .tint(preset == amount ? DrJayTheme.clinicalBlue : Color.secondary)
+        .tint(preset == amount ? DrJayTheme.sleep : Color.secondary)
     }
 }

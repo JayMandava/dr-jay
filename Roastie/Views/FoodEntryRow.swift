@@ -36,7 +36,7 @@ struct FoodEntryRow: View {
                 if entry.usedCorrectionMemory == true {
                     Label("Remembered", systemImage: "brain.head.profile")
                         .font(.caption2.weight(.medium))
-                        .foregroundStyle(DrJayTheme.frostBlue)
+                        .foregroundStyle(DrJayTheme.sleep)
                 }
             }
 
@@ -70,8 +70,8 @@ struct FoodEntryRow: View {
 
     private var statusColor: Color {
         switch entry.verdict {
-        case .healthy: DrJayTheme.clinicalBlue
-        case .unhealthy: DrJayTheme.amber
+        case .healthy: DrJayTheme.primary
+        case .unhealthy: DrJayTheme.roast
         case .unanalyzed: .secondary
         }
     }

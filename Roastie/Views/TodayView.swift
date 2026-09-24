@@ -29,14 +29,14 @@ struct TodayView: View {
                     HStack {
                         RingView(
                             progress: today?.sleepProgress ?? 0,
-                            color: DrJayTheme.clinicalBlue,
+                            color: DrJayTheme.sleep,
                             icon: "moon.zzz.fill",
                             title: "Sleep",
                             subtitle: sleepSubtitle
                         )
                         RingView(
                             progress: today?.waterProgress ?? 0,
-                            color: DrJayTheme.frostBlue,
+                            color: DrJayTheme.water,
                             icon: "drop.fill",
                             title: "Water",
                             subtitle: GoalCalculator.waterDetail(bottlesLogged: today?.waterBottlesLogged ?? 0, goal: today?.waterGoalBottles ?? settings.waterGoalBottles)
@@ -55,7 +55,7 @@ struct TodayView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.glass)
-                            .tint(DrJayTheme.clinicalBlue)
+                            .tint(DrJayTheme.sleep)
 
                             Button {
                                 Haptics.tap()
@@ -70,7 +70,7 @@ struct TodayView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.glass)
-                            .tint(DrJayTheme.frostBlue)
+                            .tint(DrJayTheme.water)
                             .disabled(isLoggingWater)
                         }
                     }
@@ -114,7 +114,7 @@ struct TodayView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.glassProminent)
-                    .tint(DrJayTheme.clinicalBlue)
+                    .tint(DrJayTheme.primary)
 
                     if Calendar.current.component(.hour, from: .now) >= 22 {
                         DailySummaryCard(result: dailySummary)
@@ -122,7 +122,7 @@ struct TodayView: View {
 
                     HStack {
                         Label(currentStreakLabel, systemImage: "flame.fill")
-                            .foregroundStyle(DrJayTheme.amber)
+                            .foregroundStyle(DrJayTheme.roast)
                         Spacer()
                         Text("Best \(streakStats.longest)")
                             .foregroundStyle(.secondary)
@@ -158,7 +158,7 @@ struct TodayView: View {
                     .accessibilityLabel("Settings")
                 }
             }
-            .tint(DrJayTheme.clinicalBlue)
+            .tint(DrJayTheme.primary)
             .sheet(isPresented: $showSettings) {
                 SettingsView(settings: $settings)
             }
@@ -327,9 +327,9 @@ private struct StepCountCard: View {
         HStack(spacing: 14) {
             Image(systemName: "figure.walk")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(DrJayTheme.frostBlue)
+                .foregroundStyle(DrJayTheme.primary)
                 .frame(width: 42, height: 42)
-                .background(DrJayTheme.frostBlue.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(DrJayTheme.veiledVista.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("Steps today")
@@ -356,7 +356,7 @@ private struct StepCountCard: View {
             if stepCount == nil, loadFinished, !isLoading {
                 Button("Connect", action: onConnect)
                     .buttonStyle(.glass)
-                    .tint(DrJayTheme.clinicalBlue)
+                    .tint(DrJayTheme.primary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -393,7 +393,7 @@ private struct DailyReportSheet: View {
                             }
                             Text(result.isComplete ? "Complete report" : "Incomplete report")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(result.isComplete ? DrJayTheme.clinicalBlue : DrJayTheme.amber)
+                                .foregroundStyle(result.isComplete ? DrJayTheme.primary : DrJayTheme.roast)
                             Text(result.detail)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -402,10 +402,10 @@ private struct DailyReportSheet: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Calculation")
                                 .font(.headline)
-                            WeightRow(label: "Food", weight: "35%", icon: "fork.knife", color: DrJayTheme.clinicalBlue)
-                            WeightRow(label: "Sleep", weight: "30%", icon: "moon.zzz.fill", color: DrJayTheme.clinicalBlue)
-                            WeightRow(label: "Water", weight: "30%", icon: "drop.fill", color: DrJayTheme.frostBlue)
-                            WeightRow(label: "Steps", weight: "5%", icon: "figure.walk", color: DrJayTheme.earth)
+                            WeightRow(label: "Food", weight: "35%", icon: "fork.knife", color: DrJayTheme.primary)
+                            WeightRow(label: "Sleep", weight: "30%", icon: "moon.zzz.fill", color: DrJayTheme.sleep)
+                            WeightRow(label: "Water", weight: "30%", icon: "drop.fill", color: DrJayTheme.water)
+                            WeightRow(label: "Steps", weight: "5%", icon: "figure.walk", color: DrJayTheme.muted)
                             Text("Missing metrics are excluded and the available weights are proportionally normalized. Missing steps never reduce the score.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -435,10 +435,10 @@ private struct DailyReportSheet: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
-                    .background(DrJayTheme.amber.opacity(0.11), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .background(DrJayTheme.goldenMist.opacity(0.18), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(DrJayTheme.amber.opacity(0.28), lineWidth: 0.5)
+                            .strokeBorder(DrJayTheme.roast.opacity(0.24), lineWidth: 0.5)
                     }
 
                     Button(action: onRegenerate) {
@@ -447,7 +447,7 @@ private struct DailyReportSheet: View {
                             .padding(.vertical, 12)
                     }
                     .buttonStyle(.glassProminent)
-                    .tint(DrJayTheme.clinicalBlue)
+                    .tint(DrJayTheme.primary)
                     .disabled(isGenerating)
                 }
                 .padding()
@@ -465,8 +465,8 @@ private struct DailyReportSheet: View {
 
     private func bandColor(_ band: DailySummaryBand) -> Color {
         switch band {
-        case .good: DrJayTheme.clinicalBlue
-        case .bad: DrJayTheme.amber
+        case .good: DrJayTheme.primary
+        case .bad: DrJayTheme.roast
         case .ugly: DrJayTheme.ugly
         }
     }
@@ -550,7 +550,7 @@ private struct FoodScoreCard: View {
                         .padding(.horizontal, 8)
                 }
                 .buttonStyle(.glass)
-                .tint(DrJayTheme.clinicalBlue)
+                .tint(DrJayTheme.primary)
             }
 
             if hasEntries {
@@ -618,8 +618,8 @@ private struct FoodScoreCard: View {
 
     private func scoreColor(_ score: Int) -> Color {
         switch FoodScoreBand.classify(score) {
-        case .good: DrJayTheme.clinicalBlue
-        case .bad: DrJayTheme.amber
+        case .good: DrJayTheme.primary
+        case .bad: DrJayTheme.roast
         case .ugly: DrJayTheme.ugly
         }
     }
@@ -643,19 +643,18 @@ private struct FoodScoreCard: View {
     }
 }
 
-/// Styled like a clinical chart note: a colored severity stripe, Dr Jay as the
-/// consistent author, and compact context metadata beside it.
+/// Uses the same inset severity stripe as food commentary so Dr Jay's notes
+/// have one consistent visual grammar.
 private struct LatestMessageCard: View {
     let record: CheckInRecord
 
-    private var accentColor: Color { record.met ? DrJayTheme.clinicalBlue : DrJayTheme.amber }
+    private var accentColor: Color { record.met ? DrJayTheme.primary : DrJayTheme.roast }
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(alignment: .top, spacing: 10) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(accentColor)
-                .frame(width: 4)
-                .padding(.vertical, 14)
+                .frame(width: 3)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
@@ -681,11 +680,9 @@ private struct LatestMessageCard: View {
                     .font(.system(.body, design: .serif))
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.vertical, 14)
-            .padding(.horizontal, 14)
-
-            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
         .clinicalCard()
     }
 }
@@ -700,7 +697,7 @@ private struct CheckInTimeline: View {
             ForEach(checkIns) { record in
                 HStack(spacing: 10) {
                     Image(systemName: record.kind == .sleep ? "moon.zzz.fill" : "drop.fill")
-                        .foregroundStyle(record.kind == .sleep ? DrJayTheme.clinicalBlue : DrJayTheme.frostBlue)
+                        .foregroundStyle(record.kind == .sleep ? DrJayTheme.sleep : DrJayTheme.water)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(record.window.label) · \(record.met ? "Cleared" : "Flagged")")
                             .font(.caption.weight(.semibold))
