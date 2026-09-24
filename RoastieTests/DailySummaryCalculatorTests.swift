@@ -74,6 +74,15 @@ final class DailySummaryCalculatorTests: XCTestCase {
         XCTAssertEqual(lower.score, upper.score)
     }
 
+    func testOverallBandBoundariesUseGoodBadUgly() {
+        XCTAssertEqual(DailySummaryBand.classify(100), .good)
+        XCTAssertEqual(DailySummaryBand.classify(80), .good)
+        XCTAssertEqual(DailySummaryBand.classify(79), .bad)
+        XCTAssertEqual(DailySummaryBand.classify(60), .bad)
+        XCTAssertEqual(DailySummaryBand.classify(59), .ugly)
+        XCTAssertEqual(DailySummaryBand.classify(0), .ugly)
+    }
+
     private func input(
         sleep: Double?,
         water: Int,

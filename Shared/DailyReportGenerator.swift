@@ -58,12 +58,16 @@ enum DailyReportGenerator {
         }
         return """
         You are Dr Jay, a brilliant diagnostician who is \(tone).
-        Explain an already-calculated daily wellness report in 2 or 3 concise sentences under 450 characters.
-        State what most helped the score, what most hurt it, and one practical next action.
+        React to an already-calculated daily wellness verdict in 2 or 3 concise sentences under 450 characters.
+        The verdict controls the response: Good gets clear clinical approval with one dry barb; Bad gets a
+        pointed roast of the weakest major factor; Ugly gets a sharper House-style diagnosis of the day's choices.
+        An incomplete chart gets roasted for missing core data instead of receiving a normal verdict reaction.
+        Interpret the result and give one practical next action.
         Treat the supplied score, metric values, weights, and completeness as fixed facts. Never recalculate,
         contradict, diagnose illness, or invent missing data. Steps have deliberately low influence because
-        a phone may not capture all movement. Target choices, never body, weight, or worth. No emoji, hashtags,
-        quotation marks, profanity, or eating-disorder language.
+        a phone may not capture all movement. Do not repeat the score, verdict, weights, or list of metrics—the UI
+        already shows them. Mention at most one specific metric, only when it explains the diagnosis. Target choices,
+        never body, weight, or worth. No emoji, hashtags, quotation marks, profanity, or eating-disorder language.
         """
     }
 
@@ -71,11 +75,12 @@ enum DailyReportGenerator {
     private static func prompt(input: DailySummaryInput, result: DailySummaryResult) -> String {
         """
         Fixed overall score: \(result.score)/100.
+        Fixed overall verdict: \(result.band.rawValue).
         Report complete: \(result.isComplete ? "yes" : "no; missing core data must be acknowledged").
         Values: \(result.detail).
         Calculation: food 35%, sleep 30%, water 30%, steps 5%. Missing metrics are excluded and the available
         weights are proportionally normalized, so absent step data never lowers the score.
-        Write the report commentary now.
+        Write a fresh House-style reaction, not a restatement of this chart.
         """
     }
 
@@ -100,10 +105,20 @@ enum DailyReportGenerator {
             observations.append("water is still below the full-day goal")
         }
 
-        let diagnosis = observations.first ?? "the core metrics are holding their end of the bargain"
-        let completeness = result.isComplete
-            ? "The chart is complete."
-            : "The chart is incomplete, so missing sleep or food was excluded rather than guessed."
-        return "\(result.score)/100: \(diagnosis.capitalized). \(completeness) Food counts 35%, sleep and water 30% each, and steps just 5%."
+        guard result.isComplete else {
+            return "An incomplete chart is not a wellness report; it is paperwork with delusions. Log the missing sleep or food data, then ask for a diagnosis."
+        }
+
+        let weakness = observations.first ?? "nothing obvious"
+        switch result.band {
+        case .good:
+            let caveat = observations.first.map { "One caveat: \($0)." }
+                ?? "No obvious lesion today."
+            return "Annoyingly competent work. \(caveat) Preserve what worked instead of treating basic consistency like a special occasion."
+        case .bad:
+            return "Salvageable, which is the nicest diagnosis available. The weak point is simple: \(weakness). Fix that first tomorrow."
+        case .ugly:
+            return "The chart is less a report than a confession. Start with the obvious lesion—\(weakness)—and give tomorrow fewer symptoms to explain."
+        }
     }
 }

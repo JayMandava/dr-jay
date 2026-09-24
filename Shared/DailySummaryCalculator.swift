@@ -10,9 +10,24 @@ struct DailySummaryInput: Equatable, Sendable {
 
 struct DailySummaryResult: Equatable, Sendable {
     let score: Int
+    let band: DailySummaryBand
     let isComplete: Bool
     let detail: String
     let roast: String
+}
+
+enum DailySummaryBand: String, Equatable, Sendable {
+    case good = "Good"
+    case bad = "Bad"
+    case ugly = "Ugly"
+
+    static func classify(_ score: Int) -> Self {
+        switch score {
+        case 80...: .good
+        case 60..<80: .bad
+        default: .ugly
+        }
+    }
 }
 
 enum DailySummaryCalculator {
@@ -42,13 +57,15 @@ enum DailySummaryCalculator {
 
         let totalWeight = weightedScores.reduce(0) { $0 + $1.weight }
         let score = Int((weightedScores.reduce(0) { $0 + $1.score * $1.weight } / totalWeight).rounded())
+        let band = DailySummaryBand.classify(score)
         let complete = input.sleepHours != nil && input.foodScore != nil
 
         return DailySummaryResult(
             score: score,
+            band: band,
             isComplete: complete,
             detail: detail(for: input),
-            roast: roast(for: score, complete: complete)
+            roast: roast(for: band, complete: complete)
         )
     }
 
@@ -70,16 +87,16 @@ enum DailySummaryCalculator {
         return [sleep, water, food, steps].joined(separator: " · ")
     }
 
-    private static func roast(for score: Int, complete: Bool) -> String {
+    private static func roast(for band: DailySummaryBand, complete: Bool) -> String {
         guard complete else {
             return "Incomplete chart. Apparently documentation is optional now."
         }
-        switch score {
-        case 80...:
+        switch band {
+        case .good:
             return "Good day. Try not to make competence a one-off event."
-        case 60..<80:
+        case .bad:
             return "Bad, but recoverable. The chart has seen worse."
-        default:
+        case .ugly:
             return "Ugly. Even your excuses need better nutrition."
         }
     }

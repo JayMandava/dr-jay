@@ -380,9 +380,19 @@ private struct DailyReportSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     if let result {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("\(result.score)/100")
-                                .font(.system(size: 48, weight: .bold, design: .rounded))
-                                .monospacedDigit()
+                            HStack(alignment: .firstTextBaseline) {
+                                Text("\(result.score)/100")
+                                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                                    .monospacedDigit()
+                                Spacer()
+                                Text(result.band.rawValue.uppercased())
+                                    .font(.caption.weight(.bold))
+                                    .tracking(0.7)
+                                    .foregroundStyle(bandColor(result.band))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(bandColor(result.band).opacity(0.14), in: Capsule())
+                            }
                             Text(result.isComplete ? "Complete report" : "Incomplete report")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(result.isComplete ? .green : .orange)
@@ -447,6 +457,14 @@ private struct DailyReportSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+
+    private func bandColor(_ band: DailySummaryBand) -> Color {
+        switch band {
+        case .good: .green
+        case .bad: .orange
+        case .ugly: .red
         }
     }
 }

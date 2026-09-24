@@ -28,7 +28,10 @@ capture every walk. Missing steps do not lower the score. Missing sleep or
 food is shown explicitly and marks the report incomplete. The same report can
 be generated on demand from Today: its score and calculation remain
 deterministic, while Apple's on-device model writes the overall commentary
-with a local fallback when Apple Intelligence is unavailable.
+with a local fallback when Apple Intelligence is unavailable. Overall scores
+use the same themed bands—Good (80–100), Bad (60–79), and Ugly (0–59)—and
+drive the approval or House-style roast instead of being recalculated by the
+model.
 
 The Today screen keeps the current verdict concise. History contains the
 detailed daily record, food entries, corrections, and previous check-ins.
