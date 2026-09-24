@@ -148,15 +148,15 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    LabeledContent("Food score") {
-                        Text("Good 80–100 · Bad 60–79 · Ugly 0–59")
-                            .multilineTextAlignment(.trailing)
-                    }
+                    aboutDetail(
+                        "Food score",
+                        detail: "Good 80–100 · Bad 60–79 · Ugly 0–59"
+                    )
 
-                    LabeledContent("Daily report") {
-                        Text("Food 35% · Sleep 30% · Water 30% · Steps 5%")
-                            .multilineTextAlignment(.trailing)
-                    }
+                    aboutDetail(
+                        "Daily report",
+                        detail: "Food 35% · Sleep 30% · Water 30% · Steps 5%"
+                    )
 
                     Text("Generate a full report anytime from Today. The score uses fixed arithmetic; only Dr Jay’s commentary is written by the on-device model.")
                         .font(.caption)
@@ -251,6 +251,19 @@ struct SettingsView: View {
             return version
         }
         return "\(version) (\(build))"
+    }
+
+    private func aboutDetail(_ title: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+            Text(detail)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 
     private func formattedHour(_ hour: Int) -> String {
