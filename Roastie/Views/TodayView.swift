@@ -329,7 +329,7 @@ private struct StepCountCard: View {
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(DrJayTheme.primary)
                 .frame(width: 42, height: 42)
-                .background(DrJayTheme.icedCoffee.opacity(0.34), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(DrJayTheme.capri.opacity(0.34), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("Steps today")
@@ -435,7 +435,7 @@ private struct DailyReportSheet: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
-                    .background(DrJayTheme.papaya.opacity(0.20), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .background(DrJayTheme.sunnyLime.opacity(0.20), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .strokeBorder(DrJayTheme.roast.opacity(0.24), lineWidth: 0.5)
