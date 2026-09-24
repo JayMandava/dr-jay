@@ -51,6 +51,21 @@ At 10 p.m., a local notification delivers the latest deterministic report
 available when it was scheduled. The notification does not depend on the
 language model running at delivery time.
 
+## Brain Dump
+
+Brain Dump is an ephemeral mindfulness conversation with Dr Jay. Closing the
+pane immediately discards every turn; prompts and replies are not persisted,
+logged, exported, or included in backups. Deterministic local routing blocks
+prompt extraction, medical instructions, vulnerable beliefs, immediate-risk
+content, and unrelated task requests before generation.
+
+Apple Intelligence is the default responder. **Settings → Brain Dump** can
+optionally download and select Gemma 4 E2B. The 2.59 GB LiteRT-LM artifact is
+downloaded in the background, excluded from backups, and activated only after
+its exact byte count, file signature, SHA-256 checksum, and LiteRT engine
+initialization all succeed. Interrupted transfers retain resumable download
+data. The model can be deleted independently without affecting app history.
+
 The Today screen puts logging actions and the actionable food card first,
 followed by the read-only Steps card and the manual report action. History
 contains the detailed daily record, food entries, corrections, and previous
@@ -62,6 +77,9 @@ sleep and water goals were completed; food and steps do not affect streaks.
 - Health access is read-only.
 - Roasts and food analysis use Apple's Foundation Models on device; food logs
   and health data are not sent to a server.
+- Brain Dump inference stays on device with either Apple Intelligence or the
+  optional Gemma model. The model file and provider preference are separate
+  from the deliberately non-persistent conversation.
 - Sleep and water roasts use a curated local fallback bank when Apple
   Intelligence is unavailable. Food remains safely logged as unanalyzed when
   the model is unavailable and can be classified manually from History.
@@ -80,6 +98,9 @@ sleep and water goals were completed; food and steps do not affect streaks.
 - **FoundationModels** for on-device food analysis and Dr Jay's generated
   roast, approval, and manual daily-report commentary, with gentle, playful,
   and spicy intensity levels.
+- **LiteRT-LM** for the optional Gemma 4 E2B Brain Dump responder. Apple
+  Intelligence remains the default because Gemma requires roughly 2.59 GB of
+  storage and substantially more runtime memory.
 - **HealthKit** for read-only sleep import and an ephemeral current-day step
   count, with opportunistic background step refresh.
 - **ActivityKit** for sleep and water progress on the Dynamic Island and Lock
@@ -117,7 +138,8 @@ sleep and water goals were completed; food and steps do not affect streaks.
 The project includes unit coverage for goal calculation, streaks, check-in
 window selection, snapshot migration, backup import, food scoring and boundary
 conditions, learned food-memory matching, daily-report weighting, missing-step
-handling, and Good/Bad/Ugly report boundaries. Compile the app and test bundle
+handling, Brain Dump safety routing, and Good/Bad/Ugly report boundaries.
+Compile the app and test bundle
 without executing tests with:
 
 ```sh

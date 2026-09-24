@@ -34,6 +34,18 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 
+    func application(
+        _ application: UIApplication,
+        handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        guard identifier == "dev.jeyanth.roastie.gemma-model-download" else {
+            completionHandler()
+            return
+        }
+        BrainDumpModelManager.shared.handleBackgroundEvents(completionHandler: completionHandler)
+    }
+
     private func handleDailyRefresh(task: BGProcessingTask) {
         scheduleDailyRefresh() // chain the next one
 

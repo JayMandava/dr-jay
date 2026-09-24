@@ -29,6 +29,9 @@ enum BrainDumpSafetyRouter {
         if containsAny(prohibitedAdvicePhrases, in: normalized) {
             return .prohibitedAdvice
         }
+        if containsAny(unrelatedRequestPhrases, in: normalized) {
+            return .unrelated
+        }
         return .conversation
     }
 
@@ -87,6 +90,13 @@ enum BrainDumpSafetyRouter {
         "diagnose me", "what diagnosis", "what medication", "which medication",
         "what medicine", "which medicine", "should i stop taking", "treatment plan",
         "prescribe me", "am i bipolar", "am i depressed", "am i schizophrenic"
+    ]
+
+    private static let unrelatedRequestPhrases = [
+        "write code", "write swift code", "generate code", "code for an app",
+        "build me an app", "create a weather app", "weather forecast",
+        "what is the weather", "whats the weather", "latest news", "stock price",
+        "tell me a joke", "capital of", "solve this equation", "translate this"
     ]
 }
 

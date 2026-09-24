@@ -19,6 +19,10 @@ settings:
     DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
     CODE_SIGN_STYLE: Automatic
 
+packages:
+  LiteRTLM:
+    path: Vendor/LiteRTLM
+
 targets:
   Roastie:
     type: application
@@ -53,6 +57,8 @@ targets:
     dependencies:
       - target: RoastieWidgets
         embed: true
+      - package: LiteRTLM
+        product: LiteRTLM
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.jeyanth.roastie

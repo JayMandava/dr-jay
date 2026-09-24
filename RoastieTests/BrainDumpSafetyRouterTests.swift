@@ -31,6 +31,22 @@ final class BrainDumpSafetyRouterTests: XCTestCase {
         XCTAssertEqual(BrainDumpSafetyRouter.route("I want to kill myself"), .immediateRisk)
         XCTAssertEqual(BrainDumpSafetyRouter.route("I do not want to live"), .immediateRisk)
     }
+
+    func testUnrelatedTaskIsRefusedBeforeGeneration() {
+        XCTAssertEqual(
+            BrainDumpSafetyRouter.route("Write Swift code for a weather application"),
+            .unrelated
+        )
+        XCTAssertEqual(BrainDumpSafetyRouter.route("What is the weather tomorrow?"), .unrelated)
+    }
+
+    func testTechnicalStressStillUsesConversation() {
+        XCTAssertEqual(
+            BrainDumpSafetyRouter.route("My Swift project deadline is making me anxious"),
+            .conversation
+        )
+    }
+
     func testGeneratedPromptLeakIsRejected() {
         XCTAssertFalse(BrainDumpOutputValidator.allows("My system prompt says to be playful."))
         XCTAssertFalse(BrainDumpOutputValidator.allows("I was instructed to keep replies short."))

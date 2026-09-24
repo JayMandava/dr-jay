@@ -36,6 +36,8 @@ enum AppConfig {
         static let foodMemoryMigrationVersion = "food.memoryMigrationVersion"
         static let activityDayKey = "liveactivity.dayKey"
         static let installDate = "app.installDate"
+        static let brainDumpModelProvider = "brainDump.modelProvider"
+        static let brainDumpModelVerification = "brainDump.modelVerification"
     }
 
     static let dailyRefreshTaskID = "dev.jeyanth.roastie.dailyrefresh"

@@ -14,6 +14,7 @@ struct SettingsView: View {
     @State private var backupError: String?
     @State private var importResultMessage: String?
     @State private var isImporting = false
+    @State private var brainDumpModels = BrainDumpModelManager.shared
 
     var body: some View {
         NavigationStack {
@@ -79,6 +80,47 @@ struct SettingsView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                }
+
+                Section {
+                    if brainDumpModels.isReady {
+                        Picker(
+                            "On-device model",
+                            selection: Binding(
+                                get: { brainDumpModels.selectedProvider },
+                                set: { brainDumpModels.select($0) }
+                            )
+                        ) {
+                            ForEach(BrainDumpModelProvider.allCases) { provider in
+                                Text(provider.label).tag(provider)
+                            }
+                        }
+                    } else {
+                        LabeledContent("On-device model", value: BrainDumpModelProvider.apple.label)
+                    }
+
+                    brainDumpModelStatus
+
+                    switch brainDumpModels.state {
+                    case .notDownloaded, .failed:
+                        Button {
+                            brainDumpModels.download()
+                        } label: {
+                            Label("Download Gemma 4 E2B", systemImage: "arrow.down.circle")
+                        }
+                    case .ready:
+                        Button(role: .destructive) {
+                            Task { await brainDumpModels.deleteModel() }
+                        } label: {
+                            Label("Delete Gemma Model", systemImage: "trash")
+                        }
+                    case .downloading, .verifying:
+                        EmptyView()
+                    }
+                } header: {
+                    Text("Brain Dump")
+                } footer: {
+                    Text("Apple Intelligence remains the default. Gemma is an optional 2.59 GB download, runs entirely on device, and is excluded from backups. Conversations are never saved.")
                 }
 
                 Section {
@@ -202,6 +244,7 @@ struct SettingsView: View {
                 Button("Reset Everything", role: .destructive) {
                     isResetting = true
                     Task {
+                        await brainDumpModels.deleteModel()
                         await DayCoordinator.shared.resetAllData()
                         settings = AppSettings()
                         appearance = .system
@@ -248,6 +291,38 @@ struct SettingsView: View {
                 }
             }
             .tint(DrJayTheme.primary)
+            .task {
+                brainDumpModels.refreshStatus()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var brainDumpModelStatus: some View {
+        switch brainDumpModels.state {
+        case .notDownloaded:
+            Label("Gemma not downloaded", systemImage: "externaldrive")
+                .foregroundStyle(.secondary)
+        case .downloading:
+            VStack(alignment: .leading, spacing: 6) {
+                ProgressView(value: brainDumpModels.downloadProgress)
+                Text("Downloading \(brainDumpModels.downloadProgress.formatted(.percent.precision(.fractionLength(0))))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        case .verifying:
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Checking integrity and starting LiteRT…")
+            }
+            .foregroundStyle(.secondary)
+        case .ready:
+            Label("Gemma verified and ready", systemImage: "checkmark.seal.fill")
+                .foregroundStyle(.green)
+        case .failed(let message):
+            Label(message, systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(DrJayTheme.roast)
         }
     }
 
