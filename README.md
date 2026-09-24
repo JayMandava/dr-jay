@@ -22,21 +22,40 @@ praise when you deliver and a sharp roast when you do not.
 - **Steps:** today's cumulative count is read directly from Health for display
   and the daily report. It is never copied into Dr Jay's database or backup.
 
-At 10 p.m., Dr Jay delivers a daily report weighted toward food (35%), sleep
-(30%), and water (30%); steps have only 5% influence because a phone may not
-capture every walk. Missing steps do not lower the score. Missing sleep or
-food is shown explicitly and marks the report incomplete. The same report can
-be generated on demand from Today: its score and calculation remain
-deterministic, while Apple's on-device model writes the overall commentary
-with a local fallback when Apple Intelligence is unavailable. Overall scores
-use the same themed bands—Good (80–100), Bad (60–79), and Ugly (0–59)—and
-drive the approval or House-style roast instead of being recalculated by the
-model.
+## Daily report
 
-The Today screen keeps the current verdict concise. History contains the
-detailed daily record, food entries, corrections, and previous check-ins.
-Current and longest streaks count consecutive days on which both sleep and
-water goals were completed; food does not currently affect streaks.
+The overall score is deterministic and uses these base weights:
+
+- **Food: 35%** — today's fixed food score.
+- **Sleep: 30%** — full credit from 6–9 hours, proportionally less below 6,
+  and reduced above 9.
+- **Water: 30%** — progress toward the complete daily bottle goal, capped at
+  full credit.
+- **Steps: 5%** — normalized up to a soft 8,000-step ceiling. This is not a
+  medical target and has deliberately low influence because a phone may not
+  capture every walk.
+
+Missing metrics are excluded and the available weights are proportionally
+normalized, so unavailable steps never lower the score. Missing sleep or food
+is shown explicitly and marks the report incomplete. Overall scores use
+**Good (80–100), Bad (60–79), and Ugly (0–59)**.
+
+The report can be generated on demand from Today. Its score, verdict, and
+calculation remain fixed; Apple's on-device model writes only Dr Jay's
+commentary. Good receives reluctant clinical approval, Bad roasts the weakest
+major factor, and Ugly receives the sharper House-style diagnosis. The model
+is instructed not to repeat the visible score, weights, or metric list. A
+local verdict-aware fallback is used when Apple Intelligence is unavailable.
+
+At 10 p.m., a local notification delivers the latest deterministic report
+available when it was scheduled. The notification does not depend on the
+language model running at delivery time.
+
+The Today screen puts logging actions and the actionable food card first,
+followed by the read-only Steps card and the manual report action. History
+contains the detailed daily record, food entries, corrections, and previous
+check-ins. Current and longest streaks count consecutive days on which both
+sleep and water goals were completed; food and steps do not affect streaks.
 
 ## Privacy and resilience
 
@@ -44,21 +63,23 @@ water goals were completed; food does not currently affect streaks.
 - Roasts and food analysis use Apple's Foundation Models on device; food logs
   and health data are not sent to a server.
 - Sleep and water roasts use a curated local fallback bank when Apple
-  Intelligence is unavailable. Food remains logged but unscored until its
-  on-device analysis succeeds.
+  Intelligence is unavailable. Food remains safely logged as unanalyzed when
+  the model is unavailable and can be classified manually from History.
 - App data is stored locally with SwiftData in the shared App Group container.
 - JSON export/import in **Settings → Data** preserves sleep, water, food
   entries, scores, learned food corrections, and check-in history; streaks are
-  rebuilt from those daily logs after import. Version 1–4 backups remain
-  compatible and manual food corrections are recovered where possible. A
-  backup leaves the app only when the user chooses to share the exported file.
-  Step counts are intentionally excluded from storage and JSON backups.
+  rebuilt from those daily logs after import. The current export schema is
+  version 5; versions 1–4 remain import-compatible, and older manual food
+  corrections are recovered where possible. A backup leaves the app only when
+  the user chooses to share the exported file. Step counts and generated daily
+  report commentary are intentionally excluded from storage and JSON backups.
 
 ## Platform features
 
 - **SwiftUI + SwiftData** for the app and App Group-backed history.
 - **FoundationModels** for on-device food analysis and Dr Jay's generated
-  roast or approval copy, with gentle, playful, and spicy intensity levels.
+  roast, approval, and manual daily-report commentary, with gentle, playful,
+  and spicy intensity levels.
 - **HealthKit** for read-only sleep import and an ephemeral current-day step
   count, with opportunistic background step refresh.
 - **ActivityKit** for sleep and water progress on the Dynamic Island and Lock
@@ -66,8 +87,10 @@ water goals were completed; food does not currently affect streaks.
 - **WidgetKit** for sleep and water Home Screen and Lock Screen widgets.
 - **App Intents** for logging bottles or sleep and checking current status
   through Siri.
-- Configurable morning, afternoon, and night local notifications, plus a 10
-  p.m. report. Their text reflects the latest values available when scheduled.
+- Configurable morning, afternoon, and night local notifications, plus an
+  exact-time 10 p.m. report. Today is personalized from the latest available
+  values; a rolling week of generic fallbacks avoids replaying stale metrics
+  if the app receives no refresh.
 
 ## Setup
 
@@ -92,8 +115,10 @@ water goals were completed; food does not currently affect streaks.
 ## Validation
 
 The project includes unit coverage for goal calculation, streaks, check-in
-window selection, snapshot migration, backup import, and food scoring. Compile
-the app and test bundle with:
+window selection, snapshot migration, backup import, food scoring and boundary
+conditions, learned food-memory matching, daily-report weighting, missing-step
+handling, and Good/Bad/Ugly report boundaries. Compile the app and test bundle
+without executing tests with:
 
 ```sh
 xcodebuild -project Roastie.xcodeproj -scheme Roastie \
@@ -104,9 +129,11 @@ xcodebuild -project Roastie.xcodeproj -scheme Roastie \
 
 - iOS does not run app code when a local notification is delivered. Its text
   therefore uses the latest values from the most recent foreground or Health
-  background refresh. Generic 10 p.m. fallbacks never repeat stale metrics.
+  background refresh. Future generic 10 p.m. fallbacks never repeat stale
+  metrics as though they belonged to a new day.
 - Background processing is opportunistic and acts as a day-rollover backstop;
-  foreground refresh remains the primary update path.
+  foreground refresh remains the primary update path. Health step observer
+  delivery is also opportunistic rather than a real-time pedometer feed.
 - A free Apple Developer signing profile normally expires after seven days.
   Export a JSON backup before reinstalling if persistent history matters.
 - Default goals are 6–9 hours of sleep and four 750 ml bottles of water; water
