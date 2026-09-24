@@ -9,6 +9,7 @@ struct TodayView: View {
     @State private var showSettings = false
     @State private var showSleepSheet = false
     @State private var showFoodSheet = false
+    @State private var showBrainDump = false
     @State private var isLoggingWater = false
     @State private var loggedFoodResult: FoodEntry?
     @State private var foodFeedback: FoodFeedback?
@@ -97,6 +98,11 @@ struct TodayView: View {
                         }
                     )
 
+                    BrainDumpCard {
+                        Haptics.tap()
+                        showBrainDump = true
+                    }
+
                     StepCountCard(
                         stepCount: stepCount,
                         isLoading: isLoadingSteps,
@@ -184,6 +190,9 @@ struct TodayView: View {
                         loggedFoodResult = entry
                     }
                 )
+            }
+            .fullScreenCover(isPresented: $showBrainDump) {
+                BrainDumpView()
             }
             .sheet(isPresented: $showDailyReport) {
                 DailyReportSheet(
