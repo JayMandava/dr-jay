@@ -98,11 +98,6 @@ struct TodayView: View {
                         }
                     )
 
-                    BrainDumpCard {
-                        Haptics.tap()
-                        showBrainDump = true
-                    }
-
                     StepCountCard(
                         stepCount: stepCount,
                         isLoading: isLoadingSteps,
@@ -122,6 +117,11 @@ struct TodayView: View {
                     }
                     .buttonStyle(.glassProminent)
                     .tint(DrJayTheme.primary)
+
+                    BrainDumpCard {
+                        Haptics.tap()
+                        showBrainDump = true
+                    }
 
                     if Calendar.current.component(.hour, from: .now) >= 22 {
                         DailySummaryCard(result: dailySummary)
