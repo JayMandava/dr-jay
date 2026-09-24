@@ -10,8 +10,13 @@ struct OnboardingView: View {
 
             ZStack {
                 Circle()
-                    .fill(iconColor.opacity(0.15))
+                    .fill(DrJayTheme.surface)
                     .frame(width: 128, height: 128)
+                    .overlay {
+                        Circle()
+                            .strokeBorder(iconColor.opacity(0.28), lineWidth: 1)
+                    }
+                    .shadow(color: iconColor.opacity(0.12), radius: 24, y: 10)
                 Image(systemName: icon)
                     .font(.system(size: 52, weight: .medium))
                     .foregroundStyle(iconColor)
@@ -41,11 +46,12 @@ struct OnboardingView: View {
             Button(step < 4 ? "Next" : "Let's go") {
                 Task { await advance() }
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.glassProminent)
             .tint(iconColor)
             .frame(maxWidth: .infinity)
         }
         .padding()
+        .background(DrJayTheme.canvas.ignoresSafeArea())
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: step)
     }
 
@@ -60,13 +66,7 @@ struct OnboardingView: View {
     }
 
     private var iconColor: Color {
-        switch step {
-        case 0: .indigo
-        case 1: .indigo
-        case 2: .cyan
-        case 3: .green
-        default: .orange
-        }
+        step == 4 ? DrJayTheme.amber : DrJayTheme.clinicalBlue
     }
 
     private var title: String {

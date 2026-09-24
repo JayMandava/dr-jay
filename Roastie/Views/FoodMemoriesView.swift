@@ -18,7 +18,7 @@ struct FoodMemoriesView: View {
                             Image(systemName: memory.verdict == .healthy
                                 ? "checkmark.circle.fill"
                                 : "exclamationmark.triangle.fill")
-                                .foregroundStyle(memory.verdict == .healthy ? .green : .orange)
+                                .foregroundStyle(memory.verdict == .healthy ? DrJayTheme.clinicalBlue : DrJayTheme.amber)
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(memory.displayText)
@@ -35,7 +35,10 @@ struct FoodMemoriesView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(DrJayTheme.canvas)
         .navigationTitle("Food Memories")
+        .tint(DrJayTheme.clinicalBlue)
         .onAppear(perform: reload)
     }
 

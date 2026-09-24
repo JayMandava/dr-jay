@@ -35,8 +35,8 @@ struct RingView: View {
 
 #Preview {
     HStack {
-        RingView(progress: 0.75, color: .indigo, icon: "moon.zzz.fill", title: "Sleep", subtitle: "6.2h / 6h")
-        RingView(progress: 0.5, color: .cyan, icon: "drop.fill", title: "Water", subtitle: "2 / 4 bottles")
+        RingView(progress: 0.75, color: DrJayTheme.clinicalBlue, icon: "moon.zzz.fill", title: "Sleep", subtitle: "6.2h / 6h")
+        RingView(progress: 0.5, color: DrJayTheme.frostBlue, icon: "drop.fill", title: "Water", subtitle: "2 / 4 bottles")
     }
     .padding()
 }

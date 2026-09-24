@@ -30,7 +30,11 @@ struct LogFoodSheet: View {
                         .scrollContentBackground(.hidden)
                         .padding(8)
                 }
-                .background(.secondary.opacity(0.09), in: RoundedRectangle(cornerRadius: 14))
+                .background(DrJayTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(DrJayTheme.outline.opacity(0.7), lineWidth: 0.5)
+                }
 
                 Label(
                     "Food is assessed on this device. Nothing is sent elsewhere.",
@@ -42,6 +46,7 @@ struct LogFoodSheet: View {
                 Spacer()
             }
             .padding()
+            .background(DrJayTheme.canvas.ignoresSafeArea())
             .navigationTitle("Log Food")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -66,6 +71,7 @@ struct LogFoodSheet: View {
                 }
             }
             .onAppear { isFocused = true }
+            .tint(DrJayTheme.clinicalBlue)
         }
         .interactiveDismissDisabled(isLogging)
         .presentationDetents([.medium])

@@ -88,7 +88,7 @@ struct SettingsView: View {
                                 : "Expires in \(daysRemaining) day\(daysRemaining == 1 ? "" : "s")",
                             systemImage: "clock.badge.exclamationmark"
                         )
-                        .foregroundStyle(daysRemaining <= 2 ? .orange : .secondary)
+                        .foregroundStyle(daysRemaining <= 2 ? DrJayTheme.amber : Color.secondary)
                     }
 
                     Button {
@@ -180,6 +180,8 @@ struct SettingsView: View {
                     Text("Erases all logged history, learned food corrections, streaks, and settings, and starts onboarding over. This can't be undone.")
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(DrJayTheme.canvas)
             .navigationTitle("Settings")
             .confirmationDialog(
                 "Reset all app data?",
@@ -233,6 +235,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            .tint(DrJayTheme.clinicalBlue)
         }
     }
 

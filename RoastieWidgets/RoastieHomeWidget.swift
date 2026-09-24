@@ -30,7 +30,7 @@ struct RoastieHomeWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: SnapshotProvider()) { entry in
             RoastieWidgetView(snapshot: entry.snapshot)
-                .containerBackground(.background, for: .widget)
+                .containerBackground(DrJayTheme.surface, for: .widget)
         }
         .configurationDisplayName("Dr Jay")
         .description("Today's sleep and water progress.")
@@ -79,19 +79,19 @@ struct RoastieWidgetView: View {
 
     private func statusRow(icon: String, wasRoast: Bool, value: String) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon).foregroundStyle(wasRoast ? .orange : .green)
+            Image(systemName: icon).foregroundStyle(wasRoast ? DrJayTheme.amber : DrJayTheme.clinicalBlue)
             Text(value).font(.caption.weight(.semibold))
             Spacer(minLength: 4)
             Image(systemName: wasRoast ? "exclamationmark.triangle.fill" : "checkmark.seal.fill")
                 .font(.caption2)
-                .foregroundStyle(wasRoast ? .orange : .green)
+                .foregroundStyle(wasRoast ? DrJayTheme.amber : DrJayTheme.clinicalBlue)
         }
     }
 
     private func statusChip(wasRoast: Bool, label: String) -> some View {
         Label(label, systemImage: wasRoast ? "exclamationmark.triangle.fill" : "checkmark.seal.fill")
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(wasRoast ? .orange : .green)
+            .foregroundStyle(wasRoast ? DrJayTheme.amber : DrJayTheme.clinicalBlue)
     }
 
     private var sleepLabel: String {
@@ -100,8 +100,8 @@ struct RoastieWidgetView: View {
 
     private var rings: some View {
         HStack(spacing: 10) {
-            miniRing(progress: snapshot.sleepProgress, color: .indigo, icon: "moon.zzz.fill")
-            miniRing(progress: snapshot.waterProgress, color: .cyan, icon: "drop.fill")
+            miniRing(progress: snapshot.sleepProgress, color: DrJayTheme.clinicalBlue, icon: "moon.zzz.fill")
+            miniRing(progress: snapshot.waterProgress, color: DrJayTheme.frostBlue, icon: "drop.fill")
         }
     }
 

@@ -31,10 +31,10 @@ struct LogSleepSheet: View {
                         .monospacedDigit()
                         .contentTransition(.numericText())
                         .animation(.snappy, value: amount)
-                        .foregroundStyle(.indigo)
+                        .foregroundStyle(DrJayTheme.clinicalBlue)
 
                     Slider(value: $amount, in: 0.5...12, step: 0.5)
-                        .tint(.indigo)
+                        .tint(DrJayTheme.clinicalBlue)
                         .padding(.horizontal, 32)
 
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 56), spacing: 10)], spacing: 10) {
@@ -50,6 +50,7 @@ struct LogSleepSheet: View {
                 }
                 .padding(.vertical, 24)
             }
+            .background(DrJayTheme.canvas.ignoresSafeArea())
             .navigationTitle("Add Sleep")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -94,7 +95,8 @@ struct LogSleepSheet: View {
                     systemImage: "heart.text.square"
                 )
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.glass)
+            .tint(DrJayTheme.clinicalBlue)
             .disabled(isReplacingFromHealth)
 
             if let healthKitError {
@@ -117,6 +119,6 @@ struct LogSleepSheet: View {
                 .frame(minWidth: 40)
         }
         .buttonStyle(.bordered)
-        .tint(preset == amount ? .indigo : .secondary)
+        .tint(preset == amount ? DrJayTheme.clinicalBlue : Color.secondary)
     }
 }

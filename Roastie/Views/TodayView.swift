@@ -25,24 +25,56 @@ struct TodayView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 20) {
                     HStack {
                         RingView(
                             progress: today?.sleepProgress ?? 0,
-                            color: .indigo,
+                            color: DrJayTheme.clinicalBlue,
                             icon: "moon.zzz.fill",
                             title: "Sleep",
                             subtitle: sleepSubtitle
                         )
                         RingView(
                             progress: today?.waterProgress ?? 0,
-                            color: .cyan,
+                            color: DrJayTheme.frostBlue,
                             icon: "drop.fill",
                             title: "Water",
                             subtitle: GoalCalculator.waterDetail(bottlesLogged: today?.waterBottlesLogged ?? 0, goal: today?.waterGoalBottles ?? settings.waterGoalBottles)
                         )
                     }
                     .padding(.top, 8)
+
+                    GlassEffectContainer(spacing: 12) {
+                        HStack(spacing: 12) {
+                            Button {
+                                Haptics.tap()
+                                showSleepSheet = true
+                            } label: {
+                                Label("Log Sleep", systemImage: "moon.zzz.fill")
+                                    .padding(.vertical, 10)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.glass)
+                            .tint(DrJayTheme.clinicalBlue)
+
+                            Button {
+                                Haptics.tap()
+                                isLoggingWater = true
+                                Task {
+                                    await DayCoordinator.shared.logWaterBottle()
+                                    isLoggingWater = false
+                                }
+                            } label: {
+                                Label(isLoggingWater ? "Logging…" : "Log Bottle", systemImage: "drop.fill")
+                                    .padding(.vertical, 10)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.glass)
+                            .tint(DrJayTheme.frostBlue)
+                            .disabled(isLoggingWater)
+                        }
+                    }
+                    .font(.subheadline.weight(.semibold))
 
                     if let latest = today?.checkIns.last {
                         LatestMessageCard(record: latest)
@@ -52,41 +84,6 @@ struct TodayView: View {
                                 removal: .opacity
                             ))
                     }
-
-                    HStack(spacing: 12) {
-                        Button {
-                            Haptics.tap()
-                            showSleepSheet = true
-                        } label: {
-                            Label("Log Sleep", systemImage: "moon.zzz.fill")
-                                .padding(.vertical, 14)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(PressableButtonStyle())
-                        .tint(.indigo)
-                        .buttonBorderShape(.roundedRectangle(radius: 14))
-                        .background(.indigo.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
-                        .foregroundStyle(.indigo)
-
-                        Button {
-                            Haptics.tap()
-                            isLoggingWater = true
-                            Task {
-                                await DayCoordinator.shared.logWaterBottle()
-                                isLoggingWater = false
-                            }
-                        } label: {
-                            Label(isLoggingWater ? "Logging…" : "Log Bottle", systemImage: "drop.fill")
-                                .padding(.vertical, 14)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(PressableButtonStyle())
-                        .disabled(isLoggingWater)
-                        .buttonBorderShape(.roundedRectangle(radius: 14))
-                        .background(.cyan.opacity(0.16), in: RoundedRectangle(cornerRadius: 14))
-                        .foregroundStyle(.cyan)
-                    }
-                    .font(.subheadline.weight(.semibold))
 
                     FoodScoreCard(
                         score: today?.foodScore,
@@ -113,13 +110,11 @@ struct TodayView: View {
                     } label: {
                         Label("Generate Today’s Report", systemImage: "chart.bar.doc.horizontal")
                             .font(.subheadline.weight(.semibold))
-                            .padding(.vertical, 14)
+                            .padding(.vertical, 10)
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(PressableButtonStyle())
-                    .buttonBorderShape(.roundedRectangle(radius: 14))
-                    .background(.purple.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
-                    .foregroundStyle(.purple)
+                    .buttonStyle(.glassProminent)
+                    .tint(DrJayTheme.clinicalBlue)
 
                     if Calendar.current.component(.hour, from: .now) >= 22 {
                         DailySummaryCard(result: dailySummary)
@@ -127,14 +122,14 @@ struct TodayView: View {
 
                     HStack {
                         Label(currentStreakLabel, systemImage: "flame.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(DrJayTheme.amber)
                         Spacer()
                         Text("Best \(streakStats.longest)")
                             .foregroundStyle(.secondary)
                     }
                     .font(.subheadline.weight(.medium))
-                    .padding(14)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+                    .padding(16)
+                    .clinicalCard()
 
                     if let today, !today.checkIns.isEmpty {
                         CheckInTimeline(checkIns: today.checkIns.sorted { $0.timestamp > $1.timestamp })
@@ -143,6 +138,7 @@ struct TodayView: View {
                 .padding()
                 .animation(.spring(response: 0.45, dampingFraction: 0.85), value: today?.checkIns.last?.id)
             }
+            .background(DrJayTheme.canvas.ignoresSafeArea())
             .navigationTitle("Dr Jay")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -151,6 +147,7 @@ struct TodayView: View {
                     } label: {
                         Image(systemName: "calendar")
                     }
+                    .accessibilityLabel("History")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -158,8 +155,10 @@ struct TodayView: View {
                     } label: {
                         Image(systemName: "gearshape")
                     }
+                    .accessibilityLabel("Settings")
                 }
             }
+            .tint(DrJayTheme.clinicalBlue)
             .sheet(isPresented: $showSettings) {
                 SettingsView(settings: $settings)
             }
@@ -328,9 +327,9 @@ private struct StepCountCard: View {
         HStack(spacing: 14) {
             Image(systemName: "figure.walk")
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(.mint)
+                .foregroundStyle(DrJayTheme.frostBlue)
                 .frame(width: 42, height: 42)
-                .background(.mint.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                .background(DrJayTheme.frostBlue.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("Steps today")
@@ -356,14 +355,13 @@ private struct StepCountCard: View {
 
             if stepCount == nil, loadFinished, !isLoading {
                 Button("Connect", action: onConnect)
-                    .buttonStyle(.bordered)
-                    .tint(.mint)
+                    .buttonStyle(.glass)
+                    .tint(DrJayTheme.clinicalBlue)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.separator, lineWidth: 0.5))
+        .clinicalCard()
     }
 }
 
@@ -395,7 +393,7 @@ private struct DailyReportSheet: View {
                             }
                             Text(result.isComplete ? "Complete report" : "Incomplete report")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(result.isComplete ? .green : .orange)
+                                .foregroundStyle(result.isComplete ? DrJayTheme.clinicalBlue : DrJayTheme.amber)
                             Text(result.detail)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
@@ -404,16 +402,16 @@ private struct DailyReportSheet: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Calculation")
                                 .font(.headline)
-                            WeightRow(label: "Food", weight: "35%", icon: "fork.knife", color: .green)
-                            WeightRow(label: "Sleep", weight: "30%", icon: "moon.zzz.fill", color: .indigo)
-                            WeightRow(label: "Water", weight: "30%", icon: "drop.fill", color: .cyan)
-                            WeightRow(label: "Steps", weight: "5%", icon: "figure.walk", color: .mint)
+                            WeightRow(label: "Food", weight: "35%", icon: "fork.knife", color: DrJayTheme.clinicalBlue)
+                            WeightRow(label: "Sleep", weight: "30%", icon: "moon.zzz.fill", color: DrJayTheme.clinicalBlue)
+                            WeightRow(label: "Water", weight: "30%", icon: "drop.fill", color: DrJayTheme.frostBlue)
+                            WeightRow(label: "Steps", weight: "5%", icon: "figure.walk", color: DrJayTheme.earth)
                             Text("Missing metrics are excluded and the available weights are proportionally normalized. Missing steps never reduce the score.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(16)
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                        .clinicalCard()
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -437,19 +435,24 @@ private struct DailyReportSheet: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
-                    .background(.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 16))
+                    .background(DrJayTheme.amber.opacity(0.11), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .strokeBorder(DrJayTheme.amber.opacity(0.28), lineWidth: 0.5)
+                    }
 
                     Button(action: onRegenerate) {
                         Label("Generate Again", systemImage: "arrow.clockwise")
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.purple)
+                    .buttonStyle(.glassProminent)
+                    .tint(DrJayTheme.clinicalBlue)
                     .disabled(isGenerating)
                 }
                 .padding()
             }
+            .background(DrJayTheme.canvas.ignoresSafeArea())
             .navigationTitle("Today’s Report")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -462,9 +465,9 @@ private struct DailyReportSheet: View {
 
     private func bandColor(_ band: DailySummaryBand) -> Color {
         switch band {
-        case .good: .green
-        case .bad: .orange
-        case .ugly: .red
+        case .good: DrJayTheme.clinicalBlue
+        case .bad: DrJayTheme.amber
+        case .ugly: DrJayTheme.ugly
         }
     }
 }
@@ -515,8 +518,7 @@ private struct DailySummaryCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.separator, lineWidth: 0.5))
+        .clinicalCard()
     }
 }
 
@@ -544,13 +546,11 @@ private struct FoodScoreCard: View {
                 Button(action: onLogFood) {
                     Label("Log Food", systemImage: "fork.knife")
                         .font(.subheadline.weight(.semibold))
-                        .padding(.vertical, 9)
-                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 8)
                 }
-                .buttonStyle(PressableButtonStyle())
-                .buttonBorderShape(.roundedRectangle(radius: 12))
-                .background(.green.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
-                .foregroundStyle(.green)
+                .buttonStyle(.glass)
+                .tint(DrJayTheme.clinicalBlue)
             }
 
             if hasEntries {
@@ -613,15 +613,14 @@ private struct FoodScoreCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.separator, lineWidth: 0.5))
+        .clinicalCard()
     }
 
     private func scoreColor(_ score: Int) -> Color {
         switch FoodScoreBand.classify(score) {
-        case .good: .green
-        case .bad: .orange
-        case .ugly: .red
+        case .good: DrJayTheme.clinicalBlue
+        case .bad: DrJayTheme.amber
+        case .ugly: DrJayTheme.ugly
         }
     }
 
@@ -649,7 +648,7 @@ private struct FoodScoreCard: View {
 private struct LatestMessageCard: View {
     let record: CheckInRecord
 
-    private var accentColor: Color { record.met ? .green : .orange }
+    private var accentColor: Color { record.met ? DrJayTheme.clinicalBlue : DrJayTheme.amber }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -687,8 +686,7 @@ private struct LatestMessageCard: View {
 
             Spacer(minLength: 0)
         }
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.separator, lineWidth: 0.5))
+        .clinicalCard()
     }
 }
 
@@ -702,7 +700,7 @@ private struct CheckInTimeline: View {
             ForEach(checkIns) { record in
                 HStack(spacing: 10) {
                     Image(systemName: record.kind == .sleep ? "moon.zzz.fill" : "drop.fill")
-                        .foregroundStyle(record.kind == .sleep ? .indigo : .cyan)
+                        .foregroundStyle(record.kind == .sleep ? DrJayTheme.clinicalBlue : DrJayTheme.frostBlue)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(record.window.label) · \(record.met ? "Cleared" : "Flagged")")
                             .font(.caption.weight(.semibold))

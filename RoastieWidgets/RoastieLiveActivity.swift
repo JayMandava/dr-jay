@@ -6,16 +6,16 @@ struct RoastieLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RoastieActivityAttributes.self) { context in
             LockScreenView(state: context.state)
-                .activityBackgroundTint(.black.opacity(0.8))
+                .activityBackgroundTint(Color(red: 34 / 255, green: 34 / 255, blue: 34 / 255).opacity(0.96))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    miniRing(progress: context.state.sleepProgress, color: .indigo, icon: "moon.zzz.fill")
+                    miniRing(progress: context.state.sleepProgress, color: DrJayTheme.clinicalBlue, icon: "moon.zzz.fill")
                         .padding(.leading, 6)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    miniRing(progress: context.state.waterProgress, color: .cyan, icon: "drop.fill")
+                    miniRing(progress: context.state.waterProgress, color: DrJayTheme.frostBlue, icon: "drop.fill")
                         .padding(.trailing, 6)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
@@ -33,11 +33,11 @@ struct RoastieLiveActivity: Widget {
                 }
             } compactLeading: {
                 Image(systemName: "moon.zzz.fill")
-                    .foregroundStyle(context.state.sleepGoalMet == false ? .red : .indigo)
+                    .foregroundStyle(context.state.sleepGoalMet == false ? DrJayTheme.ugly : DrJayTheme.clinicalBlue)
             } compactTrailing: {
                 Text("\(context.state.waterBottlesLogged)/\(context.state.waterGoalBottles)")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.cyan)
+                    .foregroundStyle(DrJayTheme.frostBlue)
             } minimal: {
                 Image(systemName: context.state.latestWasRoastIcon)
             }
@@ -58,10 +58,10 @@ struct RoastieLiveActivity: Widget {
 
     private func statusChip(label: String, icon: String, wasRoast: Bool) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: icon).font(.caption2).foregroundStyle(wasRoast ? .orange : .green)
+            Image(systemName: icon).font(.caption2).foregroundStyle(wasRoast ? DrJayTheme.amber : DrJayTheme.clinicalBlue)
             Text("\(label) \(wasRoast ? "Flagged" : "Cleared")")
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(wasRoast ? .orange : .green)
+                .foregroundStyle(wasRoast ? DrJayTheme.amber : DrJayTheme.clinicalBlue)
         }
     }
 }
@@ -78,13 +78,13 @@ private struct LockScreenView: View {
     var body: some View {
         HStack(spacing: 16) {
             VStack(spacing: 4) {
-                ring(progress: state.sleepProgress, color: .indigo, icon: "moon.zzz.fill")
+                ring(progress: state.sleepProgress, color: DrJayTheme.clinicalBlue, icon: "moon.zzz.fill")
                 Text(state.sleepHours.map { String(format: "%.1fh", $0) } ?? "–")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.7))
             }
             VStack(spacing: 4) {
-                ring(progress: state.waterProgress, color: .cyan, icon: "drop.fill")
+                ring(progress: state.waterProgress, color: DrJayTheme.frostBlue, icon: "drop.fill")
                 Text("\(state.waterBottlesLogged)/\(state.waterGoalBottles)")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.7))
@@ -117,7 +117,7 @@ private struct LockScreenView: View {
         HStack(spacing: 4) {
             Image(systemName: wasRoast ? "exclamationmark.triangle.fill" : "checkmark.seal.fill")
                 .font(.caption2)
-                .foregroundStyle(wasRoast ? .orange : .green)
+                .foregroundStyle(wasRoast ? DrJayTheme.amber : DrJayTheme.clinicalBlue)
             Text("\(label): \(wasRoast ? "Flagged" : "Cleared")")
                 .font(.footnote.weight(.medium))
                 .foregroundStyle(.white)

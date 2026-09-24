@@ -54,7 +54,10 @@ struct HistoryView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(DrJayTheme.canvas)
         .navigationTitle("History")
+        .tint(DrJayTheme.clinicalBlue)
     }
 
     private func metric(value: Int, label: String) -> some View {
@@ -108,6 +111,6 @@ struct HistoryView: View {
     private func statusIcon(_ log: DailyLog) -> some View {
         let bothMet = log.sleepGoalMet == true && log.waterProgress >= 1
         return Image(systemName: bothMet ? "checkmark.circle.fill" : "flame.fill")
-            .foregroundStyle(bothMet ? .green : .orange)
+            .foregroundStyle(bothMet ? DrJayTheme.clinicalBlue : DrJayTheme.amber)
     }
 }
