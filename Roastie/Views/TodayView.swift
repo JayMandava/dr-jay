@@ -3,6 +3,7 @@ import SwiftData
 
 struct TodayView: View {
     @Binding var settings: AppSettings
+    @Binding var appearance: AppAppearance
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
     @State private var showSettings = false
@@ -160,7 +161,7 @@ struct TodayView: View {
             }
             .tint(DrJayTheme.primary)
             .sheet(isPresented: $showSettings) {
-                SettingsView(settings: $settings)
+                SettingsView(settings: $settings, appearance: $appearance)
             }
             .sheet(isPresented: $showSleepSheet) {
                 LogSleepSheet(

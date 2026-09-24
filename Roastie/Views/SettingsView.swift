@@ -4,6 +4,7 @@ import UIKit
 
 struct SettingsView: View {
     @Binding var settings: AppSettings
+    @Binding var appearance: AppAppearance
     @Environment(\.dismiss) private var dismiss
     @State private var healthKitError: String?
     @State private var showResetConfirmation = false
@@ -17,6 +18,16 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Appearance") {
+                    Picker("Appearance", selection: $appearance) {
+                        ForEach(AppAppearance.allCases) { option in
+                            Text(option.label).tag(option)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
                 Section("Water") {
                     Stepper("Daily goal: \(settings.waterGoalBottles) bottles", value: $settings.waterGoalBottles, in: 1...12)
                     Stepper("Bottle size: \(settings.bottleSizeMl) ml", value: $settings.bottleSizeMl, in: 250...1500, step: 250)
@@ -193,6 +204,7 @@ struct SettingsView: View {
                     Task {
                         await DayCoordinator.shared.resetAllData()
                         settings = AppSettings()
+                        appearance = .system
                         isResetting = false
                         dismiss()
                     }
