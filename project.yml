@@ -34,7 +34,7 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        NSHealthShareUsageDescription: "Dr Jay checks your sleep from Health so it knows whether to hype you up or roast you."
+        NSHealthShareUsageDescription: "Dr Jay reads your sleep and today's step count from Health for your private daily report."
         NSHealthUpdateUsageDescription: "Dr Jay does not write to Health today, but may ask in future."
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: true
@@ -48,6 +48,7 @@ targets:
         com.apple.security.application-groups:
           - group.dev.jeyanth.roastie
         com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.background-delivery: true
         com.apple.developer.healthkit.access: []
     dependencies:
       - target: RoastieWidgets

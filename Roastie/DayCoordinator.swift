@@ -556,7 +556,24 @@ final class DayCoordinator {
         )
         SharedStore.save(snapshot)
         WidgetCenter.shared.reloadAllTimelines()
-        await NotificationManager.rescheduleAll(settings: settings)
+        let steps: Int?
+        do {
+            steps = try await HealthKitManager.shared.stepsToday()
+        } catch {
+            AppLogger.report(error, operation: "Read steps for daily summary", logger: AppLogger.health)
+            steps = nil
+        }
+        let summaryInput = DailySummaryInput(
+            sleepHours: log.sleepHours,
+            waterBottlesLogged: log.waterBottlesLogged,
+            waterGoalBottles: log.waterGoalBottles,
+            foodScore: log.foodScore,
+            steps: steps
+        )
+        await NotificationManager.rescheduleAll(
+            settings: settings,
+            dailySummaryInput: summaryInput
+        )
     }
 
     private func nextCheckInLabel(settings: AppSettings) -> String {

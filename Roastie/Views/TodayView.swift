@@ -3,6 +3,7 @@ import SwiftData
 
 struct TodayView: View {
     @Binding var settings: AppSettings
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
     @State private var showSettings = false
     @State private var showSleepSheet = false
@@ -10,6 +11,9 @@ struct TodayView: View {
     @State private var isLoggingWater = false
     @State private var loggedFoodResult: FoodEntry?
     @State private var foodFeedback: FoodFeedback?
+    @State private var stepCount: Int?
+    @State private var isLoadingSteps = false
+    @State private var stepLoadFinished = false
 
     private var today: DailyLog? { logs.first { $0.dayKey == Date().dayKey } }
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
@@ -80,6 +84,13 @@ struct TodayView: View {
                     }
                     .font(.subheadline.weight(.semibold))
 
+                    StepCountCard(
+                        stepCount: stepCount,
+                        isLoading: isLoadingSteps,
+                        loadFinished: stepLoadFinished,
+                        onConnect: connectSteps
+                    )
+
                     FoodScoreCard(
                         score: today?.foodScore,
                         summary: today?.foodScoreSummary,
@@ -90,6 +101,10 @@ struct TodayView: View {
                             showFoodSheet = true
                         }
                     )
+
+                    if Calendar.current.component(.hour, from: .now) >= 22 {
+                        DailySummaryCard(result: dailySummary)
+                    }
 
                     HStack {
                         Label(currentStreakLabel, systemImage: "flame.fill")
@@ -160,7 +175,60 @@ struct TodayView: View {
             }
             .task {
                 await DayCoordinator.shared.refreshToday()
+                await refreshSteps()
             }
+            .refreshable {
+                await DayCoordinator.shared.refreshToday()
+                await refreshSteps()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                Task { await refreshSteps() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .healthStepCountDidChange)) { _ in
+                Task { await refreshSteps() }
+            }
+        }
+    }
+
+    private var dailySummary: DailySummaryResult {
+        DailySummaryCalculator.calculate(DailySummaryInput(
+            sleepHours: today?.sleepHours,
+            waterBottlesLogged: today?.waterBottlesLogged ?? 0,
+            waterGoalBottles: today?.waterGoalBottles ?? settings.waterGoalBottles,
+            foodScore: today?.foodScoreIsCurrent == true ? today?.foodScore : nil,
+            steps: stepCount
+        ))
+    }
+
+    private func refreshSteps() async {
+        guard HealthKitManager.shared.isAvailable else {
+            stepLoadFinished = true
+            return
+        }
+        isLoadingSteps = true
+        defer {
+            isLoadingSteps = false
+            stepLoadFinished = true
+        }
+        do {
+            stepCount = try await HealthKitManager.shared.stepsToday()
+        } catch {
+            AppLogger.report(error, operation: "Read steps for Today", logger: AppLogger.health)
+            stepCount = nil
+        }
+    }
+
+    private func connectSteps() {
+        Task {
+            isLoadingSteps = true
+            do {
+                try await HealthKitManager.shared.requestStepAuthorization()
+            } catch {
+                AppLogger.report(error, operation: "Request step access", logger: AppLogger.health)
+            }
+            await refreshSteps()
+            await DayCoordinator.shared.refreshToday()
         }
     }
 
@@ -197,6 +265,89 @@ struct TodayView: View {
         case .healthy:
             break
         }
+    }
+}
+
+private struct StepCountCard: View {
+    let stepCount: Int?
+    let isLoading: Bool
+    let loadFinished: Bool
+    let onConnect: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "figure.walk")
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(.mint)
+                .frame(width: 42, height: 42)
+                .background(.mint.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Steps today")
+                    .font(.headline)
+                if let stepCount {
+                    Text(stepCount.formatted())
+                        .font(.title2.bold().monospacedDigit())
+                } else if isLoading || !loadFinished {
+                    Text("Reading Health…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("No readable step data")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Text("From Health · Not stored by Dr Jay")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if stepCount == nil, loadFinished, !isLoading {
+                Button("Connect", action: onConnect)
+                    .buttonStyle(.bordered)
+                    .tint(.mint)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.separator, lineWidth: 0.5))
+    }
+}
+
+private struct DailySummaryCard: View {
+    let result: DailySummaryResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Daily report", systemImage: "chart.bar.doc.horizontal")
+                    .font(.headline)
+                Spacer()
+                Text("\(result.score)/100")
+                    .font(.title3.bold().monospacedDigit())
+            }
+
+            Text(result.detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Divider()
+
+            Text("Dr Jay")
+                .font(.caption2.weight(.semibold))
+                .tracking(0.5)
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+            Text(result.roast)
+                .font(.system(.subheadline, design: .serif))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.separator, lineWidth: 0.5))
     }
 }
 

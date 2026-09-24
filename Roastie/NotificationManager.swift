@@ -1,8 +1,8 @@
 import Foundation
 import UserNotifications
 
-/// Schedules the 6 repeating daily local notifications (sleep + water, x3
-/// check-in windows). Local notifications cannot be modified by a notification
+/// Schedules the 6 repeating daily check-ins and a rolling week of exact-time
+/// 10 p.m. summaries. Local notifications cannot be modified by a notification
 /// service extension at delivery time, so each request is personalized from
 /// the latest shared snapshot when it is scheduled. `DayCoordinator` calls
 /// this again whenever that snapshot changes.
@@ -39,12 +39,15 @@ enum NotificationManager {
         }
     }
 
-    /// Cancels and reschedules all 6 repeating daily check-ins, plus the
-    /// backup-expiry reminder, against the current settings. Safe to call
+    /// Cancels and reschedules all daily notifications, plus the backup-expiry
+    /// reminder, against the current settings. Safe to call
     /// any time settings change — `removeAllPendingNotificationRequests`
     /// wipes everything first, so every scheduled thing has to be re-added
     /// here or it silently stops firing.
-    static func rescheduleAll(settings: AppSettings) async {
+    static func rescheduleAll(
+        settings: AppSettings,
+        dailySummaryInput: DailySummaryInput? = nil
+    ) async {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
 
@@ -72,7 +75,48 @@ enum NotificationManager {
             )
         }
 
+        await scheduleDailySummaries(input: dailySummaryInput)
         await scheduleBackupReminder()
+    }
+
+    /// A personalized report is scheduled for today when it has not passed.
+    /// Generic fallbacks cover the next six evenings if iOS does not relaunch
+    /// the app; any foreground or Health update rebuilds the rolling schedule
+    /// with fresh values. This avoids repeating yesterday's metrics forever.
+    private static func scheduleDailySummaries(input: DailySummaryInput?) async {
+        let calendar = Calendar.current
+        let now = Date()
+
+        for dayOffset in 0..<7 {
+            guard let day = calendar.date(byAdding: .day, value: dayOffset, to: now) else { continue }
+            var components = calendar.dateComponents([.year, .month, .day], from: day)
+            components.hour = 22
+            components.minute = 0
+            guard let fireDate = calendar.date(from: components), fireDate > now else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = "Dr Jay’s daily report"
+            if dayOffset == 0, let input {
+                let report = DailySummaryCalculator.calculate(input)
+                content.body = "\(report.score)/100 · \(report.detail). \(report.roast)"
+            } else {
+                content.body = "Rounds are over. Open Dr Jay for today’s live report."
+            }
+            content.sound = .default
+            content.interruptionLevel = .active
+
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: "daily.summary.\(day.dayKey)",
+                content: content,
+                trigger: trigger
+            )
+            do {
+                try await UNUserNotificationCenter.current().add(request)
+            } catch {
+                AppLogger.report(error, operation: "Schedule daily summary", logger: AppLogger.notifications)
+            }
+        }
     }
 
     /// Fires once, a day before a free-provisioning install's 7-day trust

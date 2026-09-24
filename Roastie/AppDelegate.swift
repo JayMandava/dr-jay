@@ -8,6 +8,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         UNUserNotificationCenter.current().delegate = self
         NotificationManager.registerCategories()
 
+        Task { @MainActor in
+            HealthKitManager.shared.startObservingSteps {
+                NotificationCenter.default.post(name: .healthStepCountDidChange, object: nil)
+                await DayCoordinator.shared.refreshToday()
+            }
+        }
+
         BGTaskScheduler.shared.register(forTaskWithIdentifier: AppConfig.dailyRefreshTaskID, using: nil) { task in
             self.handleDailyRefresh(task: task as! BGProcessingTask)
         }

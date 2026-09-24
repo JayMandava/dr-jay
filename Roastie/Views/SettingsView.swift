@@ -136,20 +136,25 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Dr Jay", systemImage: "stethoscope")
                             .font(.headline)
-                        Text("Sleep, water, and food accountability—with clinical honesty and an unhealthy amount of sarcasm.")
+                        Text("Sleep, water, food, and a lightweight step check—with clinical honesty and an unhealthy amount of sarcasm.")
                             .foregroundStyle(.secondary)
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Private by design", systemImage: "lock.shield")
                             .font(.headline)
-                        Text("Roasts, food analysis, and learned corrections stay on device. Health access is read-only, and data leaves only when you export a JSON backup.")
+                        Text("Roasts, food analysis, and learned corrections stay on device. Health access is read-only. Today's step count is displayed but never stored or exported.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
 
                     LabeledContent("Food score") {
                         Text("Good 80–100 · Bad 60–79 · Ugly 0–59")
+                            .multilineTextAlignment(.trailing)
+                    }
+
+                    LabeledContent("Daily report") {
+                        Text("Food 35% · Sleep 30% · Water 30% · Steps 5%")
                             .multilineTextAlignment(.trailing)
                     }
 
@@ -217,8 +222,8 @@ struct SettingsView: View {
                     Button("Done") {
                         SharedStore.save(settings)
                         Task {
-                            await NotificationManager.rescheduleAll(settings: settings)
                             await DayCoordinator.shared.applyWaterGoalChange(settings.waterGoalBottles)
+                            await DayCoordinator.shared.refreshToday()
                         }
                         dismiss()
                     }

@@ -1,8 +1,8 @@
 # Dr Jay
 
 Dr Jay is a private, on-device accountability app for iPhone (iOS 26+) that
-tracks sleep, water, and food—with praise when you deliver and a sharp roast
-when you do not.
+tracks sleep, water, and food, and surfaces today's Health step count—with
+praise when you deliver and a sharp roast when you do not.
 
 ## What it tracks
 
@@ -19,6 +19,13 @@ when you do not.
   can be corrected or deleted from History. A correction becomes private
   local memory: exact future matches use it automatically, while similar
   foods receive it only as context for a fresh assessment.
+- **Steps:** today's cumulative count is read directly from Health for display
+  and the daily report. It is never copied into Dr Jay's database or backup.
+
+At 10 p.m., Dr Jay delivers a daily report weighted toward food (35%), sleep
+(30%), and water (30%); steps have only 5% influence because a phone may not
+capture every walk. Missing steps do not lower the score. Missing sleep or
+food is shown explicitly and marks the report incomplete.
 
 The Today screen keeps the current verdict concise. History contains the
 detailed daily record, food entries, corrections, and previous check-ins.
@@ -39,20 +46,22 @@ water goals were completed; food does not currently affect streaks.
   rebuilt from those daily logs after import. Version 1–4 backups remain
   compatible and manual food corrections are recovered where possible. A
   backup leaves the app only when the user chooses to share the exported file.
+  Step counts are intentionally excluded from storage and JSON backups.
 
 ## Platform features
 
 - **SwiftUI + SwiftData** for the app and App Group-backed history.
 - **FoundationModels** for on-device food analysis and Dr Jay's generated
   roast or approval copy, with gentle, playful, and spicy intensity levels.
-- **HealthKit** for read-only sleep import.
+- **HealthKit** for read-only sleep import and an ephemeral current-day step
+  count, with opportunistic background step refresh.
 - **ActivityKit** for sleep and water progress on the Dynamic Island and Lock
   Screen.
 - **WidgetKit** for sleep and water Home Screen and Lock Screen widgets.
 - **App Intents** for logging bottles or sleep and checking current status
   through Siri.
-- Configurable morning, afternoon, and night local notifications. Their plain
-  status text reflects the most recent app snapshot available when scheduled.
+- Configurable morning, afternoon, and night local notifications, plus a 10
+  p.m. report. Their text reflects the latest values available when scheduled.
 
 ## Setup
 
@@ -88,8 +97,8 @@ xcodebuild -project Roastie.xcodeproj -scheme Roastie \
 ## Known constraints
 
 - iOS does not run app code when a local notification is delivered. Its text
-  therefore uses the latest snapshot from the most recent foreground or
-  background refresh.
+  therefore uses the latest values from the most recent foreground or Health
+  background refresh. Generic 10 p.m. fallbacks never repeat stale metrics.
 - Background processing is opportunistic and acts as a day-rollover backstop;
   foreground refresh remains the primary update path.
 - A free Apple Developer signing profile normally expires after seven days.
