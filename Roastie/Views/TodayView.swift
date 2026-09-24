@@ -99,6 +99,13 @@ struct TodayView: View {
                         }
                     )
 
+                    StepCountCard(
+                        stepCount: stepCount,
+                        isLoading: isLoadingSteps,
+                        loadFinished: stepLoadFinished,
+                        onConnect: connectSteps
+                    )
+
                     Button {
                         Haptics.tap()
                         showDailyReport = true
@@ -113,13 +120,6 @@ struct TodayView: View {
                     .buttonBorderShape(.roundedRectangle(radius: 14))
                     .background(.purple.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
                     .foregroundStyle(.purple)
-
-                    StepCountCard(
-                        stepCount: stepCount,
-                        isLoading: isLoadingSteps,
-                        loadFinished: stepLoadFinished,
-                        onConnect: connectSteps
-                    )
 
                     if Calendar.current.component(.hour, from: .now) >= 22 {
                         DailySummaryCard(result: dailySummary)
