@@ -14,6 +14,10 @@ struct TodayView: View {
     @State private var stepCount: Int?
     @State private var isLoadingSteps = false
     @State private var stepLoadFinished = false
+    @State private var showDailyReport = false
+    @State private var reportResult: DailySummaryResult?
+    @State private var reportCommentary: String?
+    @State private var isGeneratingReport = false
 
     private var today: DailyLog? { logs.first { $0.dayKey == Date().dayKey } }
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
@@ -95,6 +99,21 @@ struct TodayView: View {
                         }
                     )
 
+                    Button {
+                        Haptics.tap()
+                        showDailyReport = true
+                        Task { await generateDailyReport() }
+                    } label: {
+                        Label("Generate Today’s Report", systemImage: "chart.bar.doc.horizontal")
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.vertical, 14)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(PressableButtonStyle())
+                    .buttonBorderShape(.roundedRectangle(radius: 14))
+                    .background(.purple.opacity(0.14), in: RoundedRectangle(cornerRadius: 14))
+                    .foregroundStyle(.purple)
+
                     StepCountCard(
                         stepCount: stepCount,
                         isLoading: isLoadingSteps,
@@ -166,6 +185,16 @@ struct TodayView: View {
                     }
                 )
             }
+            .sheet(isPresented: $showDailyReport) {
+                DailyReportSheet(
+                    result: reportResult,
+                    commentary: reportCommentary,
+                    isGenerating: isGeneratingReport,
+                    onRegenerate: {
+                        Task { await generateDailyReport() }
+                    }
+                )
+            }
             .alert(item: $foodFeedback) { feedback in
                 Alert(
                     title: Text(feedback.title),
@@ -192,13 +221,34 @@ struct TodayView: View {
     }
 
     private var dailySummary: DailySummaryResult {
-        DailySummaryCalculator.calculate(DailySummaryInput(
+        DailySummaryCalculator.calculate(dailySummaryInput)
+    }
+
+    private var dailySummaryInput: DailySummaryInput {
+        DailySummaryInput(
             sleepHours: today?.sleepHours,
             waterBottlesLogged: today?.waterBottlesLogged ?? 0,
             waterGoalBottles: today?.waterGoalBottles ?? settings.waterGoalBottles,
             foodScore: today?.foodScoreIsCurrent == true ? today?.foodScore : nil,
             steps: stepCount
-        ))
+        )
+    }
+
+    private func generateDailyReport() async {
+        guard !isGeneratingReport else { return }
+        isGeneratingReport = true
+        reportCommentary = nil
+
+        await refreshSteps()
+        let input = dailySummaryInput
+        let result = DailySummaryCalculator.calculate(input)
+        reportResult = result
+        reportCommentary = await DailyReportGenerator.generate(
+            input: input,
+            result: result,
+            intensity: settings.roastIntensity
+        )
+        isGeneratingReport = false
     }
 
     private func refreshSteps() async {
@@ -297,7 +347,7 @@ private struct StepCountCard: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                Text("From Health · Not stored by Dr Jay")
+                Text("Today · Apple Health")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -314,6 +364,107 @@ private struct StepCountCard: View {
         .padding(16)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.separator, lineWidth: 0.5))
+    }
+}
+
+private struct DailyReportSheet: View {
+    let result: DailySummaryResult?
+    let commentary: String?
+    let isGenerating: Bool
+    let onRegenerate: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    if let result {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("\(result.score)/100")
+                                .font(.system(size: 48, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                            Text(result.isComplete ? "Complete report" : "Incomplete report")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(result.isComplete ? .green : .orange)
+                            Text(result.detail)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Calculation")
+                                .font(.headline)
+                            WeightRow(label: "Food", weight: "35%", icon: "fork.knife", color: .green)
+                            WeightRow(label: "Sleep", weight: "30%", icon: "moon.zzz.fill", color: .indigo)
+                            WeightRow(label: "Water", weight: "30%", icon: "drop.fill", color: .cyan)
+                            WeightRow(label: "Steps", weight: "5%", icon: "figure.walk", color: .mint)
+                            Text("Missing metrics are excluded and the available weights are proportionally normalized. Missing steps never reduce the score.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(16)
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Dr Jay")
+                            .font(.caption2.weight(.semibold))
+                            .tracking(0.5)
+                            .textCase(.uppercase)
+                            .foregroundStyle(.secondary)
+
+                        if isGenerating {
+                            HStack(spacing: 10) {
+                                ProgressView()
+                                Text("Reviewing the chart…")
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else if let commentary {
+                            Text(commentary)
+                                .font(.system(.body, design: .serif))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 16))
+
+                    Button(action: onRegenerate) {
+                        Label("Generate Again", systemImage: "arrow.clockwise")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.purple)
+                    .disabled(isGenerating)
+                }
+                .padding()
+            }
+            .navigationTitle("Today’s Report")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+private struct WeightRow: View {
+    let label: String
+    let weight: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        HStack {
+            Label(label, systemImage: icon)
+                .foregroundStyle(color)
+            Spacer()
+            Text(weight)
+                .font(.subheadline.bold().monospacedDigit())
+        }
     }
 }
 

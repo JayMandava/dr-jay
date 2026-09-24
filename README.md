@@ -25,7 +25,10 @@ praise when you deliver and a sharp roast when you do not.
 At 10 p.m., Dr Jay delivers a daily report weighted toward food (35%), sleep
 (30%), and water (30%); steps have only 5% influence because a phone may not
 capture every walk. Missing steps do not lower the score. Missing sleep or
-food is shown explicitly and marks the report incomplete.
+food is shown explicitly and marks the report incomplete. The same report can
+be generated on demand from Today: its score and calculation remain
+deterministic, while Apple's on-device model writes the overall commentary
+with a local fallback when Apple Intelligence is unavailable.
 
 The Today screen keeps the current verdict concise. History contains the
 detailed daily record, food entries, corrections, and previous check-ins.

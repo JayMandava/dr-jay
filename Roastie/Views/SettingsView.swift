@@ -158,6 +158,10 @@ struct SettingsView: View {
                             .multilineTextAlignment(.trailing)
                     }
 
+                    Text("Generate a full report anytime from Today. The score uses fixed arithmetic; only Dr Jay’s commentary is written by the on-device model.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
                     LabeledContent("Version", value: appVersion)
                 }
 
