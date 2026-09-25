@@ -64,20 +64,52 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         [.banner, .sound, .list]
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        switch response.actionIdentifier {
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping @Sendable () -> Void
+    ) {
+        let actionIdentifier = response.actionIdentifier
+        let content = response.notification.request.content
+        let opensDailyReport = actionIdentifier == UNNotificationDefaultActionIdentifier
+            && content.userInfo[AppConfig.UserInfoKey.destination] as? String
+                == AppConfig.NotificationDestination.dailyReport
+
+        if opensDailyReport {
+            AppConfig.sharedDefaults.set(true, forKey: AppConfig.DefaultsKey.pendingDailyReportPresentation)
+            completionHandler()
+            Task { @MainActor in
+                NotificationCenter.default.post(name: .openDailyReportRequested, object: nil)
+            }
+            return
+        }
+
+        switch actionIdentifier {
+        case AppConfig.NotificationAction.waterLater,
+             UNNotificationDismissActionIdentifier,
+             UNNotificationDefaultActionIdentifier:
+            // Scene activation already refreshes Today; returning immediately
+            // keeps UIKit's notification completion out of the app's long
+            // HealthKit, persistence, and scheduling refresh path.
+            completionHandler()
+
         case AppConfig.NotificationAction.sleepYes:
-            await DayCoordinator.shared.recordSleepSelfReport(met: true)
+            Task { @MainActor in
+                await DayCoordinator.shared.recordSleepSelfReport(met: true)
+                completionHandler()
+            }
         case AppConfig.NotificationAction.sleepNo:
-            await DayCoordinator.shared.recordSleepSelfReport(met: false)
+            Task { @MainActor in
+                await DayCoordinator.shared.recordSleepSelfReport(met: false)
+                completionHandler()
+            }
         case AppConfig.NotificationAction.waterLog:
-            await DayCoordinator.shared.logWaterBottle()
-        case AppConfig.NotificationAction.waterLater, UNNotificationDismissActionIdentifier:
-            break
-        case UNNotificationDefaultActionIdentifier:
-            await DayCoordinator.shared.refreshToday()
+            Task { @MainActor in
+                await DayCoordinator.shared.logWaterBottle()
+                completionHandler()
+            }
         default:
-            break
+            completionHandler()
         }
     }
 }

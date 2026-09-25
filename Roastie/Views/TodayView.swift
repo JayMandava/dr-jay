@@ -215,6 +215,7 @@ struct TodayView: View {
             .task {
                 await DayCoordinator.shared.refreshToday()
                 await refreshSteps()
+                presentPendingDailyReportIfNeeded()
             }
             .refreshable {
                 await DayCoordinator.shared.refreshToday()
@@ -222,10 +223,16 @@ struct TodayView: View {
             }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
-                Task { await refreshSteps() }
+                Task {
+                    await refreshSteps()
+                    presentPendingDailyReportIfNeeded()
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .healthStepCountDidChange)) { _ in
                 Task { await refreshSteps() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .openDailyReportRequested)) { _ in
+                presentPendingDailyReportIfNeeded()
             }
         }
     }
@@ -259,6 +266,14 @@ struct TodayView: View {
             intensity: settings.roastIntensity
         )
         isGeneratingReport = false
+    }
+
+    private func presentPendingDailyReportIfNeeded() {
+        let defaults = AppConfig.sharedDefaults
+        guard defaults.bool(forKey: AppConfig.DefaultsKey.pendingDailyReportPresentation) else { return }
+        defaults.removeObject(forKey: AppConfig.DefaultsKey.pendingDailyReportPresentation)
+        showDailyReport = true
+        Task { await generateDailyReport() }
     }
 
     private func refreshSteps() async {

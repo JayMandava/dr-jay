@@ -26,6 +26,11 @@ enum AppConfig {
     enum UserInfoKey {
         static let kind = "kind"
         static let window = "window"
+        static let destination = "destination"
+    }
+
+    enum NotificationDestination {
+        static let dailyReport = "dailyReport"
     }
 
     enum DefaultsKey {
@@ -39,6 +44,7 @@ enum AppConfig {
         static let installDate = "app.installDate"
         static let brainDumpModelProvider = "brainDump.modelProvider"
         static let brainDumpModelVerification = "brainDump.modelVerification"
+        static let pendingDailyReportPresentation = "notification.pendingDailyReportPresentation"
     }
 
     static let dailyRefreshTaskID = "dev.jeyanth.roastie.dailyrefresh"
@@ -73,6 +79,10 @@ enum AppConfig {
         guard let installDate else { return nil }
         return Calendar.current.date(byAdding: .day, value: freeProvisioningWindowDays, to: installDate)
     }
+}
+
+extension Notification.Name {
+    static let openDailyReportRequested = Notification.Name("openDailyReportRequested")
 }
 
 extension Date {

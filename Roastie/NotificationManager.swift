@@ -104,6 +104,9 @@ enum NotificationManager {
             }
             content.sound = .default
             content.interruptionLevel = .active
+            content.userInfo = [
+                AppConfig.UserInfoKey.destination: AppConfig.NotificationDestination.dailyReport,
+            ]
 
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
             let request = UNNotificationRequest(
