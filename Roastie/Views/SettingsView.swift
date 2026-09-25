@@ -295,6 +295,7 @@ struct SettingsView: View {
                 brainDumpModels.refreshStatus()
             }
         }
+        .preferredColorScheme(appearance.colorScheme)
     }
 
     @ViewBuilder
