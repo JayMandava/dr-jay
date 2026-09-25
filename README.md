@@ -94,6 +94,9 @@ sleep and water goals were completed; food and steps do not affect streaks.
 
 ## Platform features
 
+- Seven selectable Pantone 2026-inspired themes, each adapted for light, dark,
+  and increased-contrast appearances. Theme changes apply immediately and are
+  shared with widgets; Tropic Tonalities remains the default.
 - **SwiftUI + SwiftData** for the app and App Group-backed history.
 - **FoundationModels** for on-device food analysis and Dr Jay's generated
   roast, approval, and manual daily-report commentary, with gentle, playful,

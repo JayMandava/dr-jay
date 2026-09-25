@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 
 enum AppAppearance: String, CaseIterable, Identifiable {
     case system
@@ -31,18 +32,23 @@ struct RoastieApp: App {
     @State private var settings = SharedStore.loadSettings()
     @AppStorage(AppConfig.DefaultsKey.appearance, store: AppConfig.sharedDefaults)
     private var appearance: AppAppearance = .system
+    @AppStorage(AppConfig.DefaultsKey.theme, store: AppConfig.sharedDefaults)
+    private var theme: AppTheme = .tropicTonalities
 
     var body: some Scene {
         WindowGroup {
             Group {
                 if settings.onboardingComplete {
-                    TodayView(settings: $settings, appearance: $appearance)
+                    TodayView(settings: $settings, appearance: $appearance, theme: $theme)
                 } else {
                     OnboardingView(settings: $settings)
                 }
             }
             .modelContainer(PersistenceController.modelContainer)
             .preferredColorScheme(appearance.colorScheme)
+            .onChange(of: theme) {
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }

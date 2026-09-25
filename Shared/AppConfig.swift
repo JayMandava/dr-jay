@@ -32,6 +32,7 @@ enum AppConfig {
         static let snapshot = "today.snapshot"
         static let settings = "app.settings"
         static let appearance = "app.appearance"
+        static let theme = "app.theme"
         static let foodCorrectionMemories = "food.correctionMemories"
         static let foodMemoryMigrationVersion = "food.memoryMigrationVersion"
         static let activityDayKey = "liveactivity.dayKey"

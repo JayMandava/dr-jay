@@ -5,6 +5,7 @@ import UIKit
 struct SettingsView: View {
     @Binding var settings: AppSettings
     @Binding var appearance: AppAppearance
+    @Binding var theme: AppTheme
     @Environment(\.dismiss) private var dismiss
     @State private var healthKitError: String?
     @State private var showResetConfirmation = false
@@ -27,6 +28,19 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
+
+                    NavigationLink {
+                        ThemePickerView(selection: $theme)
+                    } label: {
+                        LabeledContent("Theme") {
+                            HStack(spacing: 8) {
+                                ThemeSwatches(theme: theme, count: 4)
+                                    .frame(width: 56, height: 10)
+                                Text(theme.label)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
 
                 Section("Water") {
@@ -248,6 +262,7 @@ struct SettingsView: View {
                         await DayCoordinator.shared.resetAllData()
                         settings = AppSettings()
                         appearance = .system
+                        theme = .tropicTonalities
                         isResetting = false
                         dismiss()
                     }
@@ -358,6 +373,69 @@ struct SettingsView: View {
         let components = DateComponents(hour: hour)
         let date = Calendar.current.date(from: components) ?? .now
         return date.formatted(date: .omitted, time: .shortened)
+    }
+}
+
+private struct ThemePickerView: View {
+    @Binding var selection: AppTheme
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(AppTheme.allCases) { theme in
+                    Button {
+                        selection = theme
+                    } label: {
+                        HStack(spacing: 14) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(theme.label)
+                                    .foregroundStyle(.primary)
+                                ThemeSwatches(theme: theme, count: 8)
+                                    .frame(height: 12)
+                            }
+
+                            Spacer()
+
+                            if selection == theme {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(DrJayTheme.primary)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(theme.label)
+                    .accessibilityAddTraits(selection == theme ? .isSelected : [])
+                }
+            } footer: {
+                Text("Inspired by Pantone colors.")
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .background(DrJayTheme.canvas)
+        .navigationTitle("Theme")
+        .navigationBarTitleDisplayMode(.inline)
+        .tint(DrJayTheme.primary)
+    }
+}
+
+private struct ThemeSwatches: View {
+    let theme: AppTheme
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(Array(theme.previewColors.prefix(count).enumerated()), id: \.offset) { _, color in
+                Capsule(style: .continuous)
+                    .fill(color)
+                    .overlay {
+                        Capsule(style: .continuous)
+                            .strokeBorder(.primary.opacity(0.08), lineWidth: 0.5)
+                    }
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 
