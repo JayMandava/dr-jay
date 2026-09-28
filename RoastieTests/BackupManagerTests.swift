@@ -22,7 +22,9 @@ final class BackupManagerTests: XCTestCase {
             verdict: .healthy,
             assessment: "Balanced meal.",
             roast: nil,
-            qualityScore: 92
+            qualityScore: 92,
+            caffeineCount: 1,
+            sugaryItemCount: 0
         )]
         source.foodScore = 88
         source.foodScoreSummary = "The vegetables have staged a competent intervention."

@@ -8,6 +8,8 @@ struct FoodAssessment: Sendable {
     var explanation: String
     var roast: String?
     var qualityScore: Int
+    var caffeineCount: Int?
+    var sugaryItemCount: Int?
 }
 
 struct DailyFoodAssessment: Sendable {
@@ -51,6 +53,46 @@ enum FoodScoreCalculator {
             return nil
         }
         return normalized(candidate, for: entry.verdict)
+    }
+}
+
+struct FoodExposureTotals: Equatable, Sendable {
+    var caffeineCount: Int
+    var sugaryItemCount: Int
+    var trackedEntries: Int
+    var totalEntries: Int
+
+    var hasUntrackedEntries: Bool { trackedEntries < totalEntries }
+}
+
+/// Sums only model-confirmed exposure tags. Legacy and failed analyses remain
+/// visibly untracked instead of being silently treated as zero.
+enum FoodExposureCalculator {
+    static let maximumCountPerEntry = 12
+
+    static func normalized(_ count: Int) -> Int {
+        min(maximumCountPerEntry, max(0, count))
+    }
+
+    static func totals(entries: [FoodEntry]) -> FoodExposureTotals {
+        var caffeineCount = 0
+        var sugaryItemCount = 0
+        var trackedEntries = 0
+
+        for entry in entries {
+            guard let caffeine = entry.caffeineCount,
+                  let sugary = entry.sugaryItemCount else { continue }
+            caffeineCount += normalized(caffeine)
+            sugaryItemCount += normalized(sugary)
+            trackedEntries += 1
+        }
+
+        return FoodExposureTotals(
+            caffeineCount: caffeineCount,
+            sugaryItemCount: sugaryItemCount,
+            trackedEntries: trackedEntries,
+            totalEntries: entries.count
+        )
     }
 }
 
@@ -140,7 +182,9 @@ enum FoodAnalyzer {
                 roast: verdict == .healthy
                     ? nil
                     : (roast.isEmpty ? fallbackRoast(intensity: intensity) : roast),
-                qualityScore: qualityScore
+                qualityScore: qualityScore,
+                caffeineCount: FoodExposureCalculator.normalized(response.content.caffeineCount),
+                sugaryItemCount: FoodExposureCalculator.normalized(response.content.sugaryItemCount)
             )
         } catch {
             AppLogger.report(error, operation: "Analyse food entry", logger: AppLogger.food)
@@ -188,6 +232,16 @@ enum FoodAnalyzer {
 
         Assign nutrition quality from 80 through 100 when healthy, or 0 through 59 when unhealthy.
         Consider balance, nutrient density, and degree of processing within the matching range.
+        Also count explicit caffeine-forward items: coffee, tea, energy drinks, caffeinated cola,
+        pre-workout, or similarly intentional caffeine sources. Do not count trace caffeine in
+        ordinary chocolate. Count explicit quantities; use one when a qualifying item is singular
+        or its quantity is unclear.
+
+        Separately count obvious sugary treats or sweetened drinks: cakes, chocolates, sweets,
+        pastries, ice cream, desserts, or clearly sugar-sweetened beverages. Do not count fruit,
+        plain milk, sauces, staple foods, naturally occurring sugar, or incidental trace sugar.
+        Sugar-free and diet items count zero. Count explicit quantities; use one when unclear.
+
         Give one factual explanation under 100 characters. If unhealthy, write one House-style roast
         under 140 characters targeting the food choice—not the user's body, weight, worth, or eating
         habits. No diagnosis, eating-disorder language, profanity, emoji, quotation marks, or hashtags.
@@ -276,7 +330,9 @@ enum FoodAnalyzer {
             verdict: memory.verdict,
             explanation: FoodMemoryStore.rememberedAssessment,
             roast: memory.verdict == .unhealthy ? fallbackRoast(intensity: intensity) : nil,
-            qualityScore: FoodScoreCalculator.defaultScore(for: memory.verdict) ?? 0
+            qualityScore: FoodScoreCalculator.defaultScore(for: memory.verdict) ?? 0,
+            caffeineCount: nil,
+            sugaryItemCount: nil
         )
     }
 
@@ -305,6 +361,12 @@ enum FoodAnalyzer {
 
         @Guide(description: "Nutrition quality: 80 through 100 if healthy, or 0 through 59 if unhealthy.")
         var qualityScore: Int
+
+        @Guide(description: "Number of explicit caffeine-forward items. Zero when none; do not count trace caffeine in ordinary chocolate.")
+        var caffeineCount: Int
+
+        @Guide(description: "Number of obvious sugary treats or sugar-sweetened drinks. Zero for fruit, ordinary staple foods, diet, or sugar-free items.")
+        var sugaryItemCount: Int
     }
 
     @available(iOS 26.0, *)

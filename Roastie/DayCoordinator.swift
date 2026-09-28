@@ -196,6 +196,8 @@ final class DayCoordinator {
         entry.roast = assessment.roast
         entry.qualityScore = assessment.qualityScore
         entry.usedCorrectionMemory = exactMemory != nil
+        entry.caffeineCount = assessment.caffeineCount
+        entry.sugaryItemCount = assessment.sugaryItemCount
         replaceFoodEntry(entry, in: log)
         saveContext(operation: "Save food assessment")
         persistBackup()

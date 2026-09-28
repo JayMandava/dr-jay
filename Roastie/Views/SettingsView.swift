@@ -203,7 +203,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Dr Jay", systemImage: "stethoscope")
                             .font(.headline)
-                        Text("Sleep, water, food, and a lightweight step check—with clinical honesty and an unhealthy amount of sarcasm.")
+                        Text("Sleep, water, food, caffeine, sugary items, and a lightweight step check—with clinical honesty and an unhealthy amount of sarcasm.")
                             .foregroundStyle(.secondary)
                     }
 

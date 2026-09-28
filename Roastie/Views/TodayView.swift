@@ -24,6 +24,9 @@ struct TodayView: View {
 
     private var today: DailyLog? { logs.first { $0.dayKey == Date().dayKey } }
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
+    private var foodExposureTotals: FoodExposureTotals {
+        FoodExposureCalculator.totals(entries: today?.foodEntries ?? [])
+    }
 
     var body: some View {
         NavigationStack {
@@ -98,6 +101,23 @@ struct TodayView: View {
                             showFoodSheet = true
                         }
                     )
+
+                    HStack {
+                        CounterRingView(
+                            value: exposureValue(foodExposureTotals.caffeineCount),
+                            color: DrJayTheme.muted,
+                            icon: "cup.and.saucer.fill",
+                            title: "Caffeine",
+                            subtitle: exposureSubtitle
+                        )
+                        CounterRingView(
+                            value: exposureValue(foodExposureTotals.sugaryItemCount),
+                            color: DrJayTheme.roast,
+                            icon: "birthday.cake.fill",
+                            title: "Sugary items",
+                            subtitle: exposureSubtitle
+                        )
+                    }
 
                     StepCountCard(
                         stepCount: stepCount,
@@ -320,6 +340,18 @@ struct TodayView: View {
         case "manual": return "\(detail) · Manual"
         default: return detail
         }
+    }
+
+    private func exposureValue(_ count: Int) -> String {
+        guard foodExposureTotals.trackedEntries > 0 else {
+            return foodExposureTotals.totalEntries == 0 ? "0" : "—"
+        }
+        return foodExposureTotals.hasUntrackedEntries ? "\(count)+" : "\(count)"
+    }
+
+    private var exposureSubtitle: String {
+        guard foodExposureTotals.totalEntries > 0 else { return "today" }
+        return foodExposureTotals.hasUntrackedEntries ? "confirmed today" : "today"
     }
 
     private func presentFoodFeedback() {

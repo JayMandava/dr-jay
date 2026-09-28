@@ -18,7 +18,9 @@ praise when you deliver and a sharp roast when you do not.
   **Good (80–100), Bad (60–79), or Ugly (0–59)**. Individual classifications
   can be corrected or deleted from History. A correction becomes private
   local memory: exact future matches use it automatically, while similar
-  foods receive it only as context for a fresh assessment.
+  foods receive it only as context for a fresh assessment. The same analysis
+  counts explicit caffeine-forward items and obvious sugary treats or
+  sweetened drinks; naturally occurring and incidental sugar is excluded.
 - **Steps:** today's cumulative count is read directly from Health for display
   and the daily report. It is never copied into Dr Jay's database or backup.
 
@@ -67,7 +69,8 @@ initialization all succeed. Interrupted transfers retain resumable download
 data. The model can be deleted independently without affecting app history.
 
 The Today screen puts logging actions and the actionable food card first,
-followed by the read-only Steps card and the manual report action. History
+followed by caffeine and sugary-item counter rings, the read-only Steps card,
+and the manual report action. History
 contains the detailed daily record, food entries, corrections, and previous
 check-ins. Current and longest streaks count consecutive days on which both
 sleep and water goals were completed; food and steps do not affect streaks.
@@ -87,7 +90,7 @@ sleep and water goals were completed; food and steps do not affect streaks.
 - JSON export/import in **Settings → Data** preserves sleep, water, food
   entries, scores, learned food corrections, and check-in history; streaks are
   rebuilt from those daily logs after import. The current export schema is
-  version 5; versions 1–4 remain import-compatible, and older manual food
+  version 6; versions 1–5 remain import-compatible, and older manual food
   corrections are recovered where possible. A backup leaves the app only when
   the user chooses to share the exported file. Step counts and generated daily
   report commentary are intentionally excluded from storage and JSON backups.
@@ -139,8 +142,8 @@ sleep and water goals were completed; food and steps do not affect streaks.
 ## Validation
 
 The project includes unit coverage for goal calculation, streaks, check-in
-window selection, snapshot migration, backup import, food scoring and boundary
-conditions, learned food-memory matching, daily-report weighting, missing-step
+window selection, snapshot migration, backup import, food scoring and exposure
+counter boundaries, learned food-memory matching, daily-report weighting, missing-step
 handling, Brain Dump safety routing, and Good/Bad/Ugly report boundaries.
 Compile the app and test bundle
 without executing tests with:

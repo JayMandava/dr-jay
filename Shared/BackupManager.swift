@@ -10,7 +10,7 @@ import Foundation
 /// reinstall, a new device, or just wanting your history in a plain file.
 enum BackupManager {
     private static let fileName = "dr-jay-backup.json"
-    private static let currentVersion = 5
+    private static let currentVersion = 6
 
     enum BackupError: LocalizedError {
         case unsupportedVersion(Int)

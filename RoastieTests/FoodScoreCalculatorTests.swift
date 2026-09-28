@@ -48,6 +48,37 @@ final class FoodScoreCalculatorTests: XCTestCase {
         XCTAssertEqual(FoodScoreCalculator.score(entries: [entry(.unhealthy, score: nil)]), 30)
     }
 
+    func testExposureCountsClampBoundariesAndPreserveUntrackedEntries() {
+        var coffee = entry(.healthy, score: 90)
+        coffee.caffeineCount = 2
+        coffee.sugaryItemCount = -3
+
+        var desserts = entry(.unhealthy, score: 20)
+        desserts.caffeineCount = 0
+        desserts.sugaryItemCount = 99
+
+        let legacy = entry(.healthy, score: 90)
+        let totals = FoodExposureCalculator.totals(entries: [coffee, desserts, legacy])
+
+        XCTAssertEqual(totals.caffeineCount, 2)
+        XCTAssertEqual(totals.sugaryItemCount, FoodExposureCalculator.maximumCountPerEntry)
+        XCTAssertEqual(totals.trackedEntries, 2)
+        XCTAssertEqual(totals.totalEntries, 3)
+        XCTAssertTrue(totals.hasUntrackedEntries)
+    }
+
+    func testEmptyExposureTotalsAreCompleteAndZero() {
+        XCTAssertEqual(
+            FoodExposureCalculator.totals(entries: []),
+            FoodExposureTotals(
+                caffeineCount: 0,
+                sugaryItemCount: 0,
+                trackedEntries: 0,
+                totalEntries: 0
+            )
+        )
+    }
+
     private func entry(_ verdict: FoodVerdict, score: Int?) -> FoodEntry {
         FoodEntry(
             text: "Test food",

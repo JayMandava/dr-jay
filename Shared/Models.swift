@@ -78,6 +78,12 @@ struct FoodEntry: Codable, Hashable, Identifiable, Sendable {
     /// Optional migration fields keep entries from older stores/backups decodable.
     var wasManuallyCorrected: Bool? = nil
     var usedCorrectionMemory: Bool? = nil
+    /// Counts explicit caffeine-forward items in this entry. Nil means the
+    /// entry predates exposure tracking or could not be analysed.
+    var caffeineCount: Int? = nil
+    /// Counts obvious sugary treats or sweetened drinks. Nil means untracked;
+    /// ordinary foods with incidental or naturally occurring sugar count zero.
+    var sugaryItemCount: Int? = nil
 }
 
 enum FoodScoreBand: String, Codable, Equatable, Sendable {
