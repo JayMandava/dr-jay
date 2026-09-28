@@ -344,7 +344,7 @@ struct SettingsView: View {
 
     private var daysRemaining: Int? {
         guard let expiry = AppConfig.provisioningExpiryDate else { return nil }
-        let days = Calendar.current.dateComponents([.day], from: .now, to: expiry).day ?? 0
+        let days = Int(ceil(expiry.timeIntervalSinceNow / 86_400))
         return max(0, days)
     }
 

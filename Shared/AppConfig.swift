@@ -76,8 +76,43 @@ enum AppConfig {
     }
 
     static var provisioningExpiryDate: Date? {
+        if let embeddedExpiry = embeddedProvisioningExpiryDate {
+            return embeddedExpiry
+        }
         guard let installDate else { return nil }
         return Calendar.current.date(byAdding: .day, value: freeProvisioningWindowDays, to: installDate)
+    }
+
+    /// Reads the real expiration date from the provisioning profile embedded
+    /// in development builds. Re-signing the app replaces this profile, so the
+    /// displayed deadline stays accurate even when app data is preserved.
+    private static var embeddedProvisioningExpiryDate: Date? {
+        guard
+            let profileURL = Bundle.main.url(
+                forResource: "embedded",
+                withExtension: "mobileprovision"
+            ),
+            let profileData = try? Data(contentsOf: profileURL),
+            let xmlStart = profileData.range(of: Data("<?xml".utf8)),
+            let xmlEnd = profileData.range(
+                of: Data("</plist>".utf8),
+                in: xmlStart.lowerBound..<profileData.endIndex
+            )
+        else {
+            return nil
+        }
+
+        let plistData = Data(profileData[xmlStart.lowerBound..<xmlEnd.upperBound])
+        guard
+            let profile = try? PropertyListSerialization.propertyList(
+                from: plistData,
+                format: nil
+            ) as? [String: Any]
+        else {
+            return nil
+        }
+
+        return profile["ExpirationDate"] as? Date
     }
 }
 
