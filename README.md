@@ -43,8 +43,9 @@ is shown explicitly and marks the report incomplete. Overall scores use
 **Good (80–100), Bad (60–79), and Ugly (0–59)**.
 
 The report can be generated on demand from Today. Its score, verdict, and
-calculation remain fixed; the selected on-device model writes only Dr Jay's
-commentary. Good receives reluctant clinical approval, Bad roasts the weakest
+calculation remain fixed; Swift writes the factual verdict and action while
+the selected on-device model contributes only a validated, non-factual barb.
+Good receives reluctant clinical approval, Bad roasts the weakest
 major factor, and Ugly receives the sharper clinical roast. The model
 is instructed not to repeat the visible score, weights, or metric list. A
 local verdict- and intensity-aware fallback is used when generation is unavailable.
@@ -78,8 +79,9 @@ sleep and water goals were completed; food and steps do not affect streaks.
 
 **Dr Jay Insights** in History computes private 7-day and 30-day views from
 the existing log. Swift calculates coverage, goal adherence, direction,
-exposure totals, priorities, and cautiously worded patterns; the selected
-on-device model only interprets those fixed facts. Trends require at least seven
+exposure totals, priorities, and cautiously worded patterns. Swift writes the
+factual interpretation and next action; the selected on-device model contributes
+only a validated barb. Trends require at least seven
 logged days in both comparison windows, generated commentary is not stored,
 and steps remain excluded because historical step totals are never persisted.
 

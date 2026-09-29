@@ -274,6 +274,7 @@ struct TodayView: View {
     private func generateDailyReport() async {
         guard !isGeneratingReport else { return }
         isGeneratingReport = true
+        let previousCommentary = reportCommentary
         reportCommentary = nil
 
         await refreshSteps()
@@ -284,7 +285,8 @@ struct TodayView: View {
             input: input,
             result: result,
             intensity: settings.roastIntensity,
-            provider: commentaryModels.selectedProvider
+            provider: commentaryModels.selectedProvider,
+            previousCommentary: previousCommentary
         )
         isGeneratingReport = false
     }
@@ -322,12 +324,7 @@ struct TodayView: View {
     }
 
     private var sleepSubtitle: String {
-        let detail = GoalCalculator.sleepDetail(hours: today?.sleepHours)
-        switch today?.sleepSource {
-        case "healthkit": return "\(detail) · Health"
-        case "manual": return "\(detail) · Manual"
-        default: return detail
-        }
+        GoalCalculator.sleepDetail(hours: today?.sleepHours)
     }
 
     private func exposureValue(_ count: Int) -> String {

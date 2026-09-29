@@ -180,10 +180,12 @@ struct InsightsView: View {
     private func generateCommentary() async {
         guard !isGenerating else { return }
         isGenerating = true
+        let previousCommentary = commentary
         commentary = await InsightsNarrativeGenerator.generate(
             report: report,
             intensity: intensity,
-            provider: commentaryModels.selectedProvider
+            provider: commentaryModels.selectedProvider,
+            previousCommentary: previousCommentary
         )
         isGenerating = false
     }

@@ -391,7 +391,12 @@ actor GemmaBrainDumpService {
         let configuration = ConversationConfig(
             systemMessage: Message(instructions, role: .system),
             tools: [],
-            samplerConfig: try SamplerConfig(topK: 40, topP: 0.9, temperature: 0.7),
+            samplerConfig: try SamplerConfig(
+                topK: 40,
+                topP: 0.9,
+                temperature: 0.7,
+                seed: Int.random(in: 1...Int(Int32.max))
+            ),
             thinkingConfig: ThinkingConfig(enableThinking: false),
             automaticToolCalling: false
         )
