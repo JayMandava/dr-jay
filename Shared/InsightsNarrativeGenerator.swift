@@ -4,7 +4,7 @@ import FoundationModels
 #endif
 
 /// Swift owns the factual longitudinal interpretation. The selected model may
-/// add only a validated, non-factual barb.
+/// add only a roast tied to the deterministic priority.
 enum InsightsNarrativeGenerator {
     static func generate(
         report: LongitudinalInsightReport,
@@ -12,23 +12,25 @@ enum InsightsNarrativeGenerator {
         provider: BrainDumpModelProvider,
         previousCommentary: String? = nil
     ) async -> String {
+        let facts = narrativeFacts(report)
+        let target = roastTarget(report: report, direction: facts.direction)
+
         guard report.hasMinimumData else {
-            return baselineFallback(
-                report: report,
-                intensity: intensity,
-                excluding: previousCommentary
+            return compose(
+                facts: facts,
+                roast: RoastStyleContract.fallback(
+                    target: target,
+                    intensity: intensity,
+                    excluding: previousCommentary
+                )
             )
         }
 
-        let facts = narrativeFacts(report)
-        let band = overallBand(report)
         let generated: String?
-
         switch provider {
         case .gemma:
             generated = await generateWithGemma(
-                band: band,
-                direction: facts.direction,
+                target: target,
                 intensity: intensity,
                 previousCommentary: previousCommentary
             )
@@ -36,8 +38,7 @@ enum InsightsNarrativeGenerator {
             #if canImport(FoundationModels)
             if #available(iOS 26.0, *) {
                 generated = await generateWithApple(
-                    band: band,
-                    direction: facts.direction,
+                    target: target,
                     intensity: intensity,
                     previousCommentary: previousCommentary
                 )
@@ -49,8 +50,12 @@ enum InsightsNarrativeGenerator {
             #endif
         }
 
-        if let barb = validatedBarb(generated) {
-            let commentary = compose(facts: facts, barb: barb)
+        if let roast = RoastStyleContract.validated(
+            generated,
+            target: target,
+            intensity: intensity
+        ) {
+            let commentary = compose(facts: facts, roast: roast)
             if !matches(commentary, previousCommentary) {
                 return commentary
             }
@@ -58,8 +63,8 @@ enum InsightsNarrativeGenerator {
 
         return compose(
             facts: facts,
-            barb: fallbackBarb(
-                band: band,
+            roast: RoastStyleContract.fallback(
+                target: target,
                 intensity: intensity,
                 excluding: previousCommentary
             )
@@ -67,8 +72,7 @@ enum InsightsNarrativeGenerator {
     }
 
     private static func generateWithGemma(
-        band: DailySummaryBand,
-        direction: InsightDirection,
+        target: RoastTarget,
         intensity: RoastIntensity,
         previousCommentary: String?
     ) async -> String? {
@@ -76,16 +80,15 @@ enum InsightsNarrativeGenerator {
             return try await GemmaBrainDumpService.shared.respond(
                 to: [BrainDumpConversationTurn(
                     role: "user",
-                    text: prompt(
-                        band: band,
-                        direction: direction,
-                        previousCommentary: previousCommentary
-                    )
+                    text: variationPrompt(previousCommentary: previousCommentary)
                 )],
-                instructions: instructions(intensity: intensity)
+                instructions: RoastStyleContract.modelInstructions(
+                    target: target,
+                    intensity: intensity
+                )
             )
         } catch {
-            AppLogger.report(error, operation: "Generate Gemma insights barb", logger: AppLogger.food)
+            AppLogger.report(error, operation: "Generate Gemma insights roast", logger: AppLogger.food)
             return nil
         }
     }
@@ -93,160 +96,111 @@ enum InsightsNarrativeGenerator {
     #if canImport(FoundationModels)
     @available(iOS 26.0, *)
     private static func generateWithApple(
-        band: DailySummaryBand,
-        direction: InsightDirection,
+        target: RoastTarget,
         intensity: RoastIntensity,
         previousCommentary: String?
     ) async -> String? {
         guard case .available = SystemLanguageModel.default.availability else { return nil }
 
-        let session = LanguageModelSession(instructions: instructions(intensity: intensity))
+        let session = LanguageModelSession(
+            instructions: RoastStyleContract.modelInstructions(
+                target: target,
+                intensity: intensity
+            )
+        )
         do {
             let response = try await session.respond(
-                to: prompt(
-                    band: band,
-                    direction: direction,
-                    previousCommentary: previousCommentary
-                ),
-                generating: GeneratedBarb.self,
-                options: GenerationOptions(temperature: 0.85, maximumResponseTokens: 80)
+                to: variationPrompt(previousCommentary: previousCommentary),
+                generating: GeneratedRoast.self,
+                options: GenerationOptions(temperature: 0.9, maximumResponseTokens: 80)
             )
-            return response.content.barb
+            return response.content.roast
         } catch {
-            AppLogger.report(error, operation: "Generate insights barb", logger: AppLogger.food)
+            AppLogger.report(error, operation: "Generate insights roast", logger: AppLogger.food)
             return nil
         }
     }
 
     @available(iOS 26.0, *)
     @Generable
-    fileprivate struct GeneratedBarb {
-        @Guide(description: "One fresh, non-factual, intensity-matched clinical barb under 180 characters. Never mention metrics, values, scores, deficits, goals, or trends.")
-        var barb: String
+    fileprivate struct GeneratedRoast {
+        @Guide(description: "One fresh roast sentence obeying the supplied target and intensity contract.")
+        var roast: String
     }
     #endif
 
-    private static func instructions(intensity: RoastIntensity) -> String {
-        let tone = switch intensity {
-        case .gentle: "restrained, dry, and recognizably sarcastic without cruelty"
-        case .playful: "clever, acerbic, clinical, and unmistakably playful"
-        case .spicy: "cutting, ruthless about choices, and never abusive"
-        }
-        return """
-        You write exactly one original Dr Jay barb that is \(tone).
-        The app supplies a fixed status and direction only to set severity. Do not interpret health data.
-        Never mention or imply sleep, hours, deficits, water, bottles, food, meals, steps, caffeine, sugar, goals,
-        scores, percentages, values, priorities, baselines, directions, trends, or any other metric. Use no numerals.
-        Do not give advice or a factual verdict; Swift adds those separately. Target choices, never body, weight,
-        identity, or worth. No diagnosis, profanity, emoji, hashtags, quotation marks, eating-disorder language, or
-        references to real or fictional people. Return only one fresh sentence under 180 characters.
-        """
-    }
-
-    private static func prompt(
-        band: DailySummaryBand,
-        direction: InsightDirection,
-        previousCommentary: String?
-    ) -> String {
+    private static func variationPrompt(previousCommentary: String?) -> String {
         let previous = previousCommentary ?? "None"
-        let cue = ["case notes", "hospital paperwork", "clinical rounds", "the evidence"]
-            .randomElement() ?? "case notes"
+        let cue = ["bureaucratic failure", "clinical absurdity", "failed competence", "case-file embarrassment"]
+            .randomElement() ?? "clinical absurdity"
         return """
-        Fixed severity status: \(band.rawValue).
-        Fixed direction category: \(direction.label).
-        Optional style cue: \(cue).
+        Optional comic angle: \(cue).
         Previous full commentary, supplied only to prevent repetition: <previous>\(previous)</previous>
-        Write a different barb. Do not repeat any distinctive phrase from the previous commentary.
+        Write a different roast without reusing its distinctive wording.
         """
     }
 
     private static func narrativeFacts(
         _ report: LongitudinalInsightReport
     ) -> (verdict: String, action: String, direction: InsightDirection) {
-        let directions = report.metrics.map(\.direction)
-        let direction: InsightDirection
-        let verdict: String
-        if directions.contains(.slipping) {
-            direction = .slipping
-            verdict = "At least one core metric is slipping."
-        } else if directions.contains(.improving) {
-            direction = .improving
-            verdict = "The overall direction is improving."
-        } else if report.hasComparisonBaseline {
-            direction = .steady
-            verdict = "The overall pattern is steady."
-        } else {
-            direction = .buildingBaseline
-            verdict = "The current baseline is usable, but comparison history is still thin."
+        guard report.hasMinimumData else {
+            let dayWord = report.remainingBaselineDays == 1 ? "day" : "days"
+            return (
+                "The baseline is incomplete.",
+                "Log \(report.remainingBaselineDays) more \(dayWord) before treating this as a trend.",
+                .buildingBaseline
+            )
         }
-        return (verdict, report.recommendedAction, direction)
+
+        let directions = report.metrics.map(\.direction)
+        if directions.contains(.slipping) {
+            return ("At least one core metric is slipping.", report.recommendedAction, .slipping)
+        }
+        if directions.contains(.improving) {
+            return ("The overall direction is improving.", report.recommendedAction, .improving)
+        }
+        if report.hasComparisonBaseline {
+            return ("The overall pattern is steady.", report.recommendedAction, .steady)
+        }
+        return (
+            "The current baseline is usable, but comparison history is still thin.",
+            report.recommendedAction,
+            .buildingBaseline
+        )
+    }
+
+    private static func roastTarget(
+        report: LongitudinalInsightReport,
+        direction: InsightDirection
+    ) -> RoastTarget {
+        guard report.hasMinimumData else { return .baselineThin }
+
+        let average = report.metrics.compactMap(\.score)
+        let band = average.isEmpty
+            ? DailySummaryBand.ugly
+            : DailySummaryBand.classify(Int((average.reduce(0, +) / Double(average.count)).rounded()))
+
+        if band == .good, direction == .improving { return .trendImproving }
+        if band == .good, direction == .steady { return .allGood }
+
+        let focus = report.primaryFocus.lowercased()
+        if focus.contains("sleep") { return .sleepConsistency }
+        if focus.contains("water") { return .waterConsistency }
+        if focus.contains("food") { return .foodQuality }
+
+        switch direction {
+        case .improving: return .trendImproving
+        case .steady: return .trendSteady
+        case .slipping: return .trendSlipping
+        case .buildingBaseline: return .baselineThin
+        }
     }
 
     private static func compose(
         facts: (verdict: String, action: String, direction: InsightDirection),
-        barb: String
+        roast: String
     ) -> String {
-        "\(facts.verdict) \(barb) \(facts.action)"
-    }
-
-    private static func overallBand(_ report: LongitudinalInsightReport) -> DailySummaryBand {
-        let scores = report.metrics.compactMap(\.score)
-        guard !scores.isEmpty else { return .ugly }
-        return DailySummaryBand.classify(Int((scores.reduce(0, +) / Double(scores.count)).rounded()))
-    }
-
-    private static func validatedBarb(_ candidate: String?) -> String? {
-        guard let candidate else { return nil }
-        let value = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty, value.count <= 220, !value.contains(where: \.isNumber) else { return nil }
-
-        let forbidden: Set<String> = [
-            "sleep", "slept", "hour", "hours", "deficit", "excess", "water", "bottle", "bottles",
-            "food", "meal", "meals", "step", "steps", "caffeine", "sugar", "sugary", "goal", "goals",
-            "score", "scores", "percent", "percentage", "metric", "metrics", "priority", "priorities",
-            "baseline", "direction", "trend", "trends", "improving", "slipping", "steady",
-        ]
-        let words = value.lowercased().split { !$0.isLetter }.map(String.init)
-        guard forbidden.isDisjoint(with: words) else { return nil }
-        return String(value.prefix(220))
-    }
-
-    private static func baselineFallback(
-        report: LongitudinalInsightReport,
-        intensity: RoastIntensity,
-        excluding previous: String?
-    ) -> String {
-        let dayWord = report.remainingBaselineDays == 1 ? "day" : "days"
-        let candidates = switch intensity {
-        case .gentle: ["The chart is still too shy to form an opinion.", "The case notes need a little more evidence before they become persuasive."]
-        case .playful: ["At present, the chart is mostly decorative.", "This is a pattern in the same way one cloud is a weather system."]
-        case .spicy: ["This is a handful of alibis wearing graph paper.", "The evidence is so thin it could hide behind the chart grid."]
-        }
-        let barb = candidates.first { candidate in
-            !(previous?.localizedCaseInsensitiveContains(candidate) ?? false)
-        } ?? candidates[0]
-        return "The baseline is incomplete. \(barb) Log \(report.remainingBaselineDays) more \(dayWord)."
-    }
-
-    private static func fallbackBarb(
-        band: DailySummaryBand,
-        intensity: RoastIntensity,
-        excluding previous: String?
-    ) -> String {
-        let candidates: [String] = switch (band, intensity) {
-        case (.good, .gentle): ["Competence is visible; consistency would make it convincing.", "The chart is quietly impressed, which seems to have upset it."]
-        case (.good, .playful): ["The evidence looks good, which is inconvenient for your excuses.", "Apparently the patient can follow instructions after all."]
-        case (.good, .spicy): ["One clean case does not erase your archive of avoidable nonsense.", "The chart approves, despite having every historical reason not to."]
-        case (.bad, .gentle): ["The evidence is recoverable, though hardly persuasive.", "The chart is unimpressed, but not yet offended."]
-        case (.bad, .playful): ["The chart found the weak point without specialist equipment.", "Mediocrity submitted its paperwork and listed you as the attending physician."]
-        case (.bad, .spicy): ["The recurring problem has returned without a redeeming arc.", "The evidence is weak, but your commitment to avoidable errors remains robust."]
-        case (.ugly, .gentle): ["The evidence has stopped hinting and started documenting.", "The chart has concerns and none of them are subtle."]
-        case (.ugly, .playful): ["The chart is not judging you; it simply brought overwhelming evidence.", "This is less an analysis than a confession with formatting."]
-        case (.ugly, .spicy): ["The case is indefensible; even denial declined the assignment.", "The evidence is overwhelming and your choices mounted no defense."]
-        }
-        return candidates.first { candidate in
-            !(previous?.localizedCaseInsensitiveContains(candidate) ?? false)
-        } ?? candidates[0]
+        "\(facts.verdict) \(roast)\n\nPrescription: \(facts.action)"
     }
 
     private static func matches(_ value: String, _ previous: String?) -> Bool {

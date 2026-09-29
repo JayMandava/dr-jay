@@ -47,8 +47,13 @@ calculation remain fixed; Swift writes the factual verdict and action while
 the selected on-device model contributes only a validated, non-factual barb.
 Good receives reluctant clinical approval, Bad roasts the weakest
 major factor, and Ugly receives the sharper clinical roast. The model
-is instructed not to repeat the visible score, weights, or metric list. A
-local verdict- and intensity-aware fallback is used when generation is unavailable.
+is instructed not to repeat the visible score, weights, or metric list.
+Intensity changes the construction, not merely a few adjectives: Gentle uses
+indirect clinical irony, Playful uses a direct absurd comparison, and Spicy
+uses a short accusation with no advice, hedging, or soft landing. Swift fixes
+the single verified roast target and rejects generated lines that claim a
+failure in any other metric. A local target- and intensity-aware fallback is
+used when generation is unavailable or violates that contract.
 
 At 10 p.m., a local notification delivers the latest deterministic report
 available when it was scheduled. The notification does not depend on the

@@ -111,13 +111,17 @@ struct SettingsView: View {
                     }
                 }
 
-                Section("Roast intensity") {
+                Section {
                     Picker("Tone", selection: $settings.roastIntensity) {
                         ForEach(RoastIntensity.allCases) { intensity in
                             Text(intensity.label).tag(intensity)
                         }
                     }
                     .pickerStyle(.segmented)
+                } header: {
+                    Text("Roast intensity")
+                } footer: {
+                    Text("Gentle implies. Playful teases. Spicy lands a short, unsparing punchline.")
                 }
 
                 Section {

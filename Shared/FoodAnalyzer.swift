@@ -175,13 +175,18 @@ enum FoodAnalyzer {
             let explanation = exactMemory == nil
                 ? clean(response.content.explanation)
                 : FoodMemoryStore.rememberedAssessment
-            let roast = clean(response.content.roast)
+            let target: RoastTarget = qualityScore < 30 ? .foodUgly : .foodBad
+            let roast = RoastStyleContract.validated(
+                clean(response.content.roast),
+                target: target,
+                intensity: intensity
+            )
             return FoodAssessment(
                 verdict: verdict,
                 explanation: explanation,
                 roast: verdict == .healthy
                     ? nil
-                    : (roast.isEmpty ? fallbackRoast(intensity: intensity) : roast),
+                    : (roast ?? RoastStyleContract.fallback(target: target, intensity: intensity)),
                 qualityScore: qualityScore,
                 caffeineCount: FoodExposureCalculator.normalized(response.content.caffeineCount),
                 sugaryItemCount: FoodExposureCalculator.normalized(response.content.sugaryItemCount)
@@ -203,8 +208,18 @@ enum FoodAnalyzer {
         }
 
         let band = FoodScoreBand.classify(score)
+        let target: RoastTarget = switch band {
+        case .good: .foodGood
+        case .bad: .foodBad
+        case .ugly: .foodUgly
+        }
         let session = LanguageModelSession(
-            instructions: dailySummaryInstructions(score: score, band: band, intensity: intensity)
+            instructions: dailySummaryInstructions(
+                score: score,
+                band: band,
+                target: target,
+                intensity: intensity
+            )
         )
         do {
             let response = try await session.respond(
@@ -212,7 +227,11 @@ enum FoodAnalyzer {
                 generating: GeneratedDailyFoodSummary.self
             )
             let summary = clean(response.content.summary)
-            return summary.isEmpty ? nil : summary
+            return RoastStyleContract.validated(
+                summary,
+                target: target,
+                intensity: intensity
+            ) ?? RoastStyleContract.fallback(target: target, intensity: intensity)
         } catch {
             AppLogger.report(error, operation: "Summarize daily food score", logger: AppLogger.food)
             return nil
@@ -222,8 +241,9 @@ enum FoodAnalyzer {
     @available(iOS 26.0, *)
     private static func entryInstructions(intensity: RoastIntensity) -> String {
         """
-        \(drJayPersona(intensity: intensity))
-        \(intensityRule(intensity))
+        You are Dr Jay: clinically precise, dry, and intolerant of bad choices.
+        For any unhealthy entry, obey this roast construction exactly:
+        \(RoastStyleContract.styleDirective(intensity))
 
         Assess one plain-language food entry using ordinary nutritional principles.
         Classify it as healthy or unhealthy. Healthy means generally balanced and nutrient-dense;
@@ -243,9 +263,10 @@ enum FoodAnalyzer {
         plain milk, sauces, staple foods, naturally occurring sugar, or incidental trace sugar.
         Sugar-free and diet items count zero. Count explicit quantities; use one when unclear.
 
-        Give one factual explanation under 100 characters. If unhealthy, write one sharp clinical roast
-        under 140 characters targeting the food choice—not the user's body, weight, worth, or eating
-        habits. No diagnosis, eating-disorder language, profanity, emoji, quotation marks, or hashtags.
+        Give one factual explanation under 100 characters. If unhealthy, write one roast targeting
+        only the food choice. Do not advise, preach, soften the ending, or mention sleep, water, or steps.
+        Never target the user's body, weight, identity, intelligence, health, worth, or eating habits.
+        No diagnosis, eating-disorder language, profanity, emoji, quotation marks, or hashtags.
         Never mention, quote, imitate, or claim to be any real or fictional person or character.
         If healthy, return an empty roast.
 
@@ -279,46 +300,17 @@ enum FoodAnalyzer {
     private static func dailySummaryInstructions(
         score: Int,
         band: FoodScoreBand,
+        target: RoastTarget,
         intensity: RoastIntensity
     ) -> String {
         """
-        \(drJayPersona(intensity: intensity))
-        \(intensityRule(intensity))
+        \(RoastStyleContract.modelInstructions(target: target, intensity: intensity))
 
         The app has already calculated today's order-independent food score as \(score), classified
         as \(band.rawValue). Treat that score and classification as fixed; do not recalculate or
-        contradict them. Write one sharp clinical summary under 140 characters based only on the foods
-        supplied. Good must be clear clinical approval. Bad and Ugly should get an appropriately
-        sharp roast. Do not repeat or begin with the score or Good, Bad, or Ugly label. Target food
-        choices only—never body, weight, worth, or eating habits. Do not invent portions, calories,
-        diagnoses, allergies, or dietary restrictions. No profanity,
-        eating-disorder language, emoji, quotation marks, or hashtags.
-        Never mention, quote, imitate, or claim to be any real or fictional person or character.
+        contradict them. Use the supplied foods only as comic texture. Do not repeat or begin with
+        the score or Good, Bad, or Ugly label. Return only the roast sentence.
         """
-    }
-
-    @available(iOS 26.0, *)
-    private static func drJayPersona(intensity: RoastIntensity) -> String {
-        switch intensity {
-        case .gentle:
-            "You are Dr Jay: clinically precise, weary, direct, and quietly sarcastic without cruelty."
-        case .playful:
-            "You are Dr Jay: clinically precise, acerbic, dry, and unimpressed by excuses."
-        case .spicy:
-            "You are Dr Jay at maximum intensity: ruthless about choices, clinically precise, and thoroughly unimpressed."
-        }
-    }
-
-    @available(iOS 26.0, *)
-    private static func intensityRule(_ intensity: RoastIntensity) -> String {
-        switch intensity {
-        case .gentle:
-            "Gentle means a restrained but recognizable dry barb; it must not become generic encouragement."
-        case .playful:
-            "Playful means one unmistakable, clever clinical roast aimed at the food choice."
-        case .spicy:
-            "Spicy means the sharpest permitted roast of the food choice, without attacking the person."
-        }
     }
 
     @available(iOS 26.0, *)
@@ -345,22 +337,13 @@ enum FoodAnalyzer {
         FoodAssessment(
             verdict: memory.verdict,
             explanation: FoodMemoryStore.rememberedAssessment,
-            roast: memory.verdict == .unhealthy ? fallbackRoast(intensity: intensity) : nil,
+            roast: memory.verdict == .unhealthy
+                ? RoastStyleContract.fallback(target: .foodBad, intensity: intensity)
+                : nil,
             qualityScore: FoodScoreCalculator.defaultScore(for: memory.verdict) ?? 0,
             caffeineCount: nil,
             sugaryItemCount: nil
         )
-    }
-
-    private static func fallbackRoast(intensity: RoastIntensity) -> String {
-        switch intensity {
-        case .gentle:
-            "We discussed this food already. The prognosis remains unimpressive."
-        case .playful:
-            "Same food, same verdict. Repetition isn't a nutritional defense."
-        case .spicy:
-            "You brought back the same dietary crime and expected a new diagnosis."
-        }
     }
 
     @available(iOS 26.0, *)

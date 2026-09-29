@@ -68,7 +68,7 @@ enum DailySummaryCalculator {
             band: band,
             isComplete: complete,
             detail: detail(for: input),
-            roast: roast(for: band, complete: complete, intensity: intensity)
+            roast: roast(for: input, band: band, complete: complete, intensity: intensity)
         )
     }
 
@@ -91,37 +91,26 @@ enum DailySummaryCalculator {
     }
 
     private static func roast(
-        for band: DailySummaryBand,
+        for input: DailySummaryInput,
+        band: DailySummaryBand,
         complete: Bool,
         intensity: RoastIntensity
     ) -> String {
-        guard complete else {
-            return switch intensity {
-            case .gentle: "Incomplete chart. Even the paperwork would like a little more effort."
-            case .playful: "Incomplete chart. Apparently documentation is optional now."
-            case .spicy: "Incomplete chart. Even your excuses arrived with missing data."
-            }
-        }
-        switch (band, intensity) {
-        case (.good, .gentle):
-            return "Good day. Quiet competence looks surprisingly natural on you."
-        case (.good, .playful):
-            return "Good day. Try not to make competence a one-off event."
-        case (.good, .spicy):
-            return "Good day. Basic self-maintenance finally cleared the unusually low bar."
-        case (.bad, .gentle):
-            return "Bad, but recoverable. The chart is disappointed, not surprised."
-        case (.bad, .playful):
-            return "Bad, but recoverable. The chart has seen worse—mostly from you."
-        case (.bad, .spicy):
-            return "Bad. You built a preventable mess and called it a routine day."
-        case (.ugly, .gentle):
-            return "Ugly. The chart has stopped trying to be subtle."
-        case (.ugly, .playful):
-            return "Ugly. Even your excuses need better nutrition."
-        case (.ugly, .spicy):
-            return "Ugly. The evidence is overwhelming and your choices have no defense."
-        }
+        let target = roastTarget(for: input, complete: complete)
+        return "\(band.rawValue). \(RoastStyleContract.fallback(target: target, intensity: intensity))"
+    }
+
+    private static func roastTarget(
+        for input: DailySummaryInput,
+        complete: Bool
+    ) -> RoastTarget {
+        guard complete else { return .missingData }
+        if let food = input.foodScore, food < 60 { return .foodUgly }
+        if let food = input.foodScore, food < 80 { return .foodBad }
+        if let sleep = input.sleepHours, sleep < AppConfig.sleepGoalHours { return .sleepUnder }
+        if let sleep = input.sleepHours, sleep > AppConfig.sleepGoalMaxHours { return .sleepOver }
+        if input.waterBottlesLogged < max(1, input.waterGoalBottles) { return .waterIncomplete }
+        return .allGood
     }
 }
 

@@ -4,7 +4,7 @@ import FoundationModels
 #endif
 
 /// Swift owns every factual sentence. The selected model may contribute only
-/// a non-factual barb, which is validated before it reaches the UI.
+/// a target-bound roast, which is validated before it reaches the UI.
 enum DailyReportGenerator {
     static func generate(
         input: DailySummaryInput,
@@ -14,12 +14,13 @@ enum DailyReportGenerator {
         previousCommentary: String? = nil
     ) async -> String {
         let facts = narrativeFacts(input: input, result: result)
+        let target = roastTarget(input: input, result: result)
         let generated: String?
 
         switch provider {
         case .gemma:
             generated = await generateWithGemma(
-                result: result,
+                target: target,
                 intensity: intensity,
                 previousCommentary: previousCommentary
             )
@@ -27,7 +28,7 @@ enum DailyReportGenerator {
             #if canImport(FoundationModels)
             if #available(iOS 26.0, *) {
                 generated = await generateWithApple(
-                    result: result,
+                    target: target,
                     intensity: intensity,
                     previousCommentary: previousCommentary
                 )
@@ -39,8 +40,12 @@ enum DailyReportGenerator {
             #endif
         }
 
-        if let barb = validatedBarb(generated) {
-            let commentary = compose(facts: facts, barb: barb)
+        if let roast = RoastStyleContract.validated(
+            generated,
+            target: target,
+            intensity: intensity
+        ) {
+            let commentary = compose(facts: facts, roast: roast)
             if !matches(commentary, previousCommentary) {
                 return commentary
             }
@@ -48,9 +53,8 @@ enum DailyReportGenerator {
 
         return compose(
             facts: facts,
-            barb: fallbackBarb(
-                band: result.band,
-                complete: result.isComplete,
+            roast: RoastStyleContract.fallback(
+                target: target,
                 intensity: intensity,
                 excluding: previousCommentary
             )
@@ -58,7 +62,7 @@ enum DailyReportGenerator {
     }
 
     private static func generateWithGemma(
-        result: DailySummaryResult,
+        target: RoastTarget,
         intensity: RoastIntensity,
         previousCommentary: String?
     ) async -> String? {
@@ -66,12 +70,15 @@ enum DailyReportGenerator {
             return try await GemmaBrainDumpService.shared.respond(
                 to: [BrainDumpConversationTurn(
                     role: "user",
-                    text: prompt(result: result, previousCommentary: previousCommentary)
+                    text: variationPrompt(previousCommentary: previousCommentary)
                 )],
-                instructions: instructions(intensity: intensity)
+                instructions: RoastStyleContract.modelInstructions(
+                    target: target,
+                    intensity: intensity
+                )
             )
         } catch {
-            AppLogger.report(error, operation: "Generate Gemma daily report barb", logger: AppLogger.food)
+            AppLogger.report(error, operation: "Generate Gemma daily report roast", logger: AppLogger.food)
             return nil
         }
     }
@@ -79,65 +86,61 @@ enum DailyReportGenerator {
     #if canImport(FoundationModels)
     @available(iOS 26.0, *)
     private static func generateWithApple(
-        result: DailySummaryResult,
+        target: RoastTarget,
         intensity: RoastIntensity,
         previousCommentary: String?
     ) async -> String? {
         guard case .available = SystemLanguageModel.default.availability else { return nil }
 
-        let session = LanguageModelSession(instructions: instructions(intensity: intensity))
+        let session = LanguageModelSession(
+            instructions: RoastStyleContract.modelInstructions(
+                target: target,
+                intensity: intensity
+            )
+        )
         do {
             let response = try await session.respond(
-                to: prompt(result: result, previousCommentary: previousCommentary),
-                generating: GeneratedBarb.self,
-                options: GenerationOptions(temperature: 0.85, maximumResponseTokens: 80)
+                to: variationPrompt(previousCommentary: previousCommentary),
+                generating: GeneratedRoast.self,
+                options: GenerationOptions(temperature: 0.9, maximumResponseTokens: 80)
             )
-            return response.content.barb
+            return response.content.roast
         } catch {
-            AppLogger.report(error, operation: "Generate daily report barb", logger: AppLogger.food)
+            AppLogger.report(error, operation: "Generate daily report roast", logger: AppLogger.food)
             return nil
         }
     }
 
     @available(iOS 26.0, *)
     @Generable
-    fileprivate struct GeneratedBarb {
-        @Guide(description: "One fresh, non-factual, intensity-matched clinical barb under 180 characters. Never mention a metric, value, score, deficit, or goal.")
-        var barb: String
+    fileprivate struct GeneratedRoast {
+        @Guide(description: "One fresh roast sentence obeying the supplied target and intensity contract.")
+        var roast: String
     }
     #endif
 
-    private static func instructions(intensity: RoastIntensity) -> String {
-        let tone = switch intensity {
-        case .gentle: "restrained, dry, and recognizably sarcastic without cruelty"
-        case .playful: "clever, acerbic, clinical, and unmistakably playful"
-        case .spicy: "cutting, ruthless about choices, and never abusive"
-        }
+    private static func variationPrompt(previousCommentary: String?) -> String {
+        let previous = previousCommentary ?? "None"
+        let cue = ["bureaucratic failure", "clinical absurdity", "failed competence", "case-file embarrassment"]
+            .randomElement() ?? "clinical absurdity"
         return """
-        You write exactly one original Dr Jay barb that is \(tone).
-        The app supplies a fixed status only so the barb has the right severity. Do not interpret health data.
-        Never mention or imply sleep, hours, deficits, water, bottles, food, meals, steps, caffeine, sugar, goals,
-        scores, percentages, values, trends, or any other metric. Use no numerals. Do not give advice or a factual
-        verdict; Swift adds those separately. Target choices, never body, weight, identity, or worth. No diagnosis,
-        profanity, emoji, hashtags, quotation marks, eating-disorder language, or references to real or fictional
-        people. Return only one fresh sentence under 180 characters.
+        Optional comic angle: \(cue).
+        Previous full commentary, supplied only to prevent repetition: <previous>\(previous)</previous>
+        Write a different roast without reusing its distinctive wording.
         """
     }
 
-    private static func prompt(
-        result: DailySummaryResult,
-        previousCommentary: String?
-    ) -> String {
-        let status = result.isComplete ? result.band.rawValue : "Incomplete"
-        let previous = previousCommentary ?? "None"
-        let cue = ["case notes", "hospital paperwork", "clinical rounds", "the evidence"]
-            .randomElement() ?? "case notes"
-        return """
-        Fixed severity status: \(status).
-        Optional style cue: \(cue).
-        Previous full commentary, supplied only to prevent repetition: <previous>\(previous)</previous>
-        Write a different barb. Do not repeat any distinctive phrase from the previous commentary.
-        """
+    private static func roastTarget(
+        input: DailySummaryInput,
+        result: DailySummaryResult
+    ) -> RoastTarget {
+        guard result.isComplete else { return .missingData }
+        if let food = input.foodScore, food < 60 { return .foodUgly }
+        if let food = input.foodScore, food < 80 { return .foodBad }
+        if let sleep = input.sleepHours, sleep < AppConfig.sleepGoalHours { return .sleepUnder }
+        if let sleep = input.sleepHours, sleep > AppConfig.sleepGoalMaxHours { return .sleepOver }
+        if input.waterBottlesLogged < max(1, input.waterGoalBottles) { return .waterIncomplete }
+        return .allGood
     }
 
     private static func narrativeFacts(
@@ -174,64 +177,9 @@ enum DailyReportGenerator {
 
     private static func compose(
         facts: (verdict: String, action: String),
-        barb: String
+        roast: String
     ) -> String {
-        "\(facts.verdict) \(barb) \(facts.action)"
-    }
-
-    private static func validatedBarb(_ candidate: String?) -> String? {
-        guard let candidate else { return nil }
-        let value = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty, value.count <= 220, !value.contains(where: \.isNumber) else { return nil }
-
-        let forbidden: Set<String> = [
-            "sleep", "slept", "hour", "hours", "deficit", "excess", "water", "bottle", "bottles",
-            "food", "meal", "meals", "step", "steps", "caffeine", "sugar", "sugary", "goal", "goals",
-            "score", "scores", "percent", "percentage", "metric", "metrics", "trend", "trends",
-        ]
-        let words = value.lowercased().split { !$0.isLetter }.map(String.init)
-        guard forbidden.isDisjoint(with: words) else { return nil }
-        return String(value.prefix(220))
-    }
-
-    private static func fallbackBarb(
-        band: DailySummaryBand,
-        complete: Bool,
-        intensity: RoastIntensity,
-        excluding previous: String?
-    ) -> String {
-        let candidates: [String]
-        if !complete {
-            candidates = switch intensity {
-            case .gentle: [
-                "Even the paperwork would like enough evidence to form an opinion.",
-                "The case notes are currently more aspiration than documentation.",
-            ]
-            case .playful: [
-                "Calling this a report is generous; it is paperwork with delusions.",
-                "The chart arrived dressed as evidence and hoped nobody would ask questions.",
-            ]
-            case .spicy: [
-                "Even your excuses arrived unfinished.",
-                "The case collapsed before the evidence bothered to appear.",
-            ]
-            }
-        } else {
-            candidates = switch (band, intensity) {
-            case (.good, .gentle): ["Competence suits you; try making it less surprising.", "The chart is quietly impressed, which seems to have upset it."]
-            case (.good, .playful): ["Apparently the patient can follow instructions after all.", "The evidence looks competent; your excuses may file an appeal."]
-            case (.good, .spicy): ["One clean case does not erase your extensive archive of avoidable nonsense.", "The chart approves, despite having every historical reason not to."]
-            case (.bad, .gentle): ["The chart is unimpressed, but not yet offended.", "The evidence is recoverable, though hardly persuasive."]
-            case (.bad, .playful): ["Mediocrity submitted its paperwork and listed you as the attending physician.", "The chart found the problem without needing specialist equipment."]
-            case (.bad, .spicy): ["You assembled a preventable mess and presented it as routine.", "The evidence is weak, but your commitment to avoidable errors remains robust."]
-            case (.ugly, .gentle): ["The chart has concerns and none of them are subtle.", "The evidence has stopped hinting and started documenting."]
-            case (.ugly, .playful): ["This is less a report than a confession with formatting.", "The chart is not judging you; it simply brought overwhelming evidence."]
-            case (.ugly, .spicy): ["The evidence is overwhelming and your choices mounted no defense.", "The case is indefensible; even denial declined the assignment."]
-            }
-        }
-        return candidates.first { candidate in
-            !(previous?.localizedCaseInsensitiveContains(candidate) ?? false)
-        } ?? candidates[0]
+        "\(facts.verdict) \(roast)\n\nPrescription: \(facts.action)"
     }
 
     private static func matches(_ value: String, _ previous: String?) -> Bool {
