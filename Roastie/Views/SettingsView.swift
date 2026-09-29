@@ -16,7 +16,7 @@ struct SettingsView: View {
     @State private var importResultMessage: String?
     @State private var isImporting = false
     @State private var brainDumpModels = BrainDumpModelManager.shared
-    @State private var stepAccessState: StepAccessState?
+    @State private var isStepAccessConfigured: Bool?
     @State private var isRequestingStepAccess = false
 
     var body: some View {
@@ -72,24 +72,22 @@ struct SettingsView: View {
                         }
                     ))
 
-                    LabeledContent {
-                        Label(stepAccessLabel, systemImage: stepAccessIcon)
-                            .foregroundStyle(stepAccessColor)
-                    } label: {
-                        Label("Step data", systemImage: "figure.walk")
-                    }
-
-                    if stepAccessState == .requestNeeded {
-                        Button {
-                            requestStepAccess()
-                        } label: {
-                            if isRequestingStepAccess {
-                                Label("Requesting Access…", systemImage: "hourglass")
-                            } else {
-                                Label("Request Step Access", systemImage: "heart.text.clipboard")
+                    if let isStepAccessConfigured {
+                        if isStepAccessConfigured {
+                            LabeledContent("Step data", value: "Connected")
+                        } else {
+                            Button {
+                                requestStepAccess()
+                            } label: {
+                                HStack {
+                                    Text("Step data")
+                                    Spacer()
+                                    Text("Not Connected")
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+                            .disabled(isRequestingStepAccess)
                         }
-                        .disabled(isRequestingStepAccess)
                     }
 
                     if let healthKitError {
@@ -339,34 +337,6 @@ struct SettingsView: View {
         .preferredColorScheme(appearance.colorScheme)
     }
 
-    private var stepAccessLabel: String {
-        switch stepAccessState {
-        case .connected: "Connected"
-        case .accessRequested: "Access requested"
-        case .requestNeeded: "Not connected"
-        case .unavailable: "Unavailable"
-        case nil: "Checking…"
-        }
-    }
-
-    private var stepAccessIcon: String {
-        switch stepAccessState {
-        case .connected: "checkmark.circle.fill"
-        case .accessRequested: "checkmark.circle"
-        case .requestNeeded: "exclamationmark.circle"
-        case .unavailable: "xmark.circle"
-        case nil: "ellipsis.circle"
-        }
-    }
-
-    private var stepAccessColor: Color {
-        switch stepAccessState {
-        case .connected: .green
-        case .requestNeeded: DrJayTheme.roast
-        default: .secondary
-        }
-    }
-
     private func requestStepAccess() {
         guard !isRequestingStepAccess else { return }
         isRequestingStepAccess = true
@@ -384,8 +354,12 @@ struct SettingsView: View {
     }
 
     private func refreshStepAccessState() async {
+        guard HealthKitManager.shared.isAvailable else {
+            isStepAccessConfigured = nil
+            return
+        }
         do {
-            stepAccessState = try await HealthKitManager.shared.stepAccessState()
+            isStepAccessConfigured = try await HealthKitManager.shared.isStepAccessConfigured()
         } catch {
             AppLogger.report(error, operation: "Check step access", logger: AppLogger.health)
             healthKitError = error.localizedDescription

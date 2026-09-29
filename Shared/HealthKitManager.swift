@@ -5,13 +5,6 @@ extension Notification.Name {
     static let healthStepCountDidChange = Notification.Name("healthStepCountDidChange")
 }
 
-enum StepAccessState: Equatable, Sendable {
-    case unavailable
-    case requestNeeded
-    case accessRequested
-    case connected
-}
-
 /// Reads sleep and the current day's step total from HealthKit. Read-only —
 /// Roastie never writes to Health. Step totals remain ephemeral and are not
 /// copied into the app's database, shared snapshot, or backup.
@@ -37,31 +30,17 @@ final class HealthKitManager {
     }
 
     /// HealthKit does not reveal whether read access was granted or denied.
-    /// A readable sample confirms access; otherwise we can only report whether
-    /// the system has already handled the authorization request.
-    func stepAccessState(referenceDate: Date = .now) async throws -> StepAccessState {
+    /// This reports whether the system has already handled the request.
+    func isStepAccessConfigured() async throws -> Bool {
         guard isAvailable,
               let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)
-        else { return .unavailable }
-
-        if try await stepsToday(referenceDate: referenceDate) != nil {
-            return .connected
-        }
+        else { return false }
 
         let requestStatus = try await store.statusForAuthorizationRequest(
             toShare: [],
             read: [stepType]
         )
-        switch requestStatus {
-        case .shouldRequest:
-            return .requestNeeded
-        case .unnecessary:
-            return .accessRequested
-        case .unknown:
-            return .requestNeeded
-        @unknown default:
-            return .requestNeeded
-        }
+        return requestStatus == .unnecessary
     }
 
     /// Returns today's cumulative Health step count. `nil` means Health has
