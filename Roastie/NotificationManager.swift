@@ -75,7 +75,10 @@ enum NotificationManager {
             )
         }
 
-        await scheduleDailySummaries(input: dailySummaryInput)
+        await scheduleDailySummaries(
+            input: dailySummaryInput,
+            intensity: settings.roastIntensity
+        )
         await scheduleBackupReminder()
     }
 
@@ -83,7 +86,10 @@ enum NotificationManager {
     /// Generic fallbacks cover the next six evenings if iOS does not relaunch
     /// the app; any foreground or Health update rebuilds the rolling schedule
     /// with fresh values. This avoids repeating yesterday's metrics forever.
-    private static func scheduleDailySummaries(input: DailySummaryInput?) async {
+    private static func scheduleDailySummaries(
+        input: DailySummaryInput?,
+        intensity: RoastIntensity
+    ) async {
         let calendar = Calendar.current
         let now = Date()
 
@@ -97,7 +103,7 @@ enum NotificationManager {
             let content = UNMutableNotificationContent()
             content.title = "Dr Jay’s daily report"
             if dayOffset == 0, let input {
-                let report = DailySummaryCalculator.calculate(input)
+                let report = DailySummaryCalculator.calculate(input, intensity: intensity)
                 content.body = "\(report.score)/100 · \(report.detail). \(report.roast)"
             } else {
                 content.body = "Rounds are over. Open Dr Jay for today’s live report."

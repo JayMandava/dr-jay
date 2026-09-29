@@ -35,7 +35,10 @@ enum DailySummaryCalculator {
     // normalization ceiling, not a stored goal or medical recommendation.
     private static let stepReference = 8_000.0
 
-    static func calculate(_ input: DailySummaryInput) -> DailySummaryResult {
+    static func calculate(
+        _ input: DailySummaryInput,
+        intensity: RoastIntensity = .playful
+    ) -> DailySummaryResult {
         var weightedScores: [(score: Double, weight: Double)] = []
 
         if let hours = input.sleepHours {
@@ -65,7 +68,7 @@ enum DailySummaryCalculator {
             band: band,
             isComplete: complete,
             detail: detail(for: input),
-            roast: roast(for: band, complete: complete)
+            roast: roast(for: band, complete: complete, intensity: intensity)
         )
     }
 
@@ -87,17 +90,37 @@ enum DailySummaryCalculator {
         return [sleep, water, food, steps].joined(separator: " · ")
     }
 
-    private static func roast(for band: DailySummaryBand, complete: Bool) -> String {
+    private static func roast(
+        for band: DailySummaryBand,
+        complete: Bool,
+        intensity: RoastIntensity
+    ) -> String {
         guard complete else {
-            return "Incomplete chart. Apparently documentation is optional now."
+            return switch intensity {
+            case .gentle: "Incomplete chart. Even the paperwork would like a little more effort."
+            case .playful: "Incomplete chart. Apparently documentation is optional now."
+            case .spicy: "Incomplete chart. Even your excuses arrived with missing data."
+            }
         }
-        switch band {
-        case .good:
+        switch (band, intensity) {
+        case (.good, .gentle):
+            return "Good day. Quiet competence looks surprisingly natural on you."
+        case (.good, .playful):
             return "Good day. Try not to make competence a one-off event."
-        case .bad:
-            return "Bad, but recoverable. The chart has seen worse."
-        case .ugly:
+        case (.good, .spicy):
+            return "Good day. Basic self-maintenance finally cleared the unusually low bar."
+        case (.bad, .gentle):
+            return "Bad, but recoverable. The chart is disappointed, not surprised."
+        case (.bad, .playful):
+            return "Bad, but recoverable. The chart has seen worse—mostly from you."
+        case (.bad, .spicy):
+            return "Bad. You built a preventable mess and called it a routine day."
+        case (.ugly, .gentle):
+            return "Ugly. The chart has stopped trying to be subtle."
+        case (.ugly, .playful):
             return "Ugly. Even your excuses need better nutrition."
+        case (.ugly, .spicy):
+            return "Ugly. The evidence is overwhelming and your choices have no defense."
         }
     }
 }

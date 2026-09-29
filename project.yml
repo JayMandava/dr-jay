@@ -72,6 +72,9 @@ targets:
     sources:
       - path: RoastieWidgets
       - path: Shared
+        excludes:
+          - DailyReportGenerator.swift
+          - InsightsNarrativeGenerator.swift
     info:
       path: RoastieWidgets/Info.plist
       properties:

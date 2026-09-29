@@ -8,6 +8,7 @@ struct InsightsView: View {
     @State private var period: InsightsPeriod = .sevenDays
     @State private var commentary = ""
     @State private var isGenerating = false
+    @State private var commentaryModels = BrainDumpModelManager.shared
 
     private var report: LongitudinalInsightReport {
         LongitudinalInsightsCalculator.calculate(logs: logs, period: period)
@@ -131,29 +132,29 @@ struct InsightsView: View {
     }
 
     private var exposureCard: some View {
-        HStack(spacing: 0) {
-            exposureMetric(
-                value: report.exposureDays > 0 ? "\(report.caffeineTotal)" : "—",
-                label: "Caffeine",
-                icon: "cup.and.saucer.fill",
-                color: DrJayTheme.muted
-            )
-            Divider()
-            exposureMetric(
-                value: report.exposureDays > 0 ? "\(report.sugaryItemTotal)" : "—",
-                label: "Sugary items",
-                icon: "birthday.cake.fill",
-                color: DrJayTheme.roast
-            )
-        }
-        .padding(.vertical, 16)
-        .clinicalCard()
-        .overlay(alignment: .bottom) {
+        VStack(spacing: 10) {
+            HStack(spacing: 0) {
+                exposureMetric(
+                    value: report.exposureDays > 0 ? "\(report.caffeineTotal)" : "—",
+                    label: "Caffeine",
+                    icon: "cup.and.saucer.fill",
+                    color: DrJayTheme.muted
+                )
+                Divider()
+                    .frame(height: 48)
+                exposureMetric(
+                    value: report.exposureDays > 0 ? "\(report.sugaryItemTotal)" : "—",
+                    label: "Sugary items",
+                    icon: "birthday.cake.fill",
+                    color: DrJayTheme.roast
+                )
+            }
             Text(report.exposureDays > 0 ? "Confirmed across \(report.exposureDays) logged food days" : "No confirmed exposure baseline")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .padding(.bottom, 4)
         }
+        .padding(16)
+        .clinicalCard()
     }
 
     private func exposureMetric(value: String, label: String, icon: String, color: Color) -> some View {
@@ -166,7 +167,6 @@ struct InsightsView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.bottom, 10)
     }
 
     private func metricColor(_ metric: InsightMetric) -> Color {
@@ -180,7 +180,11 @@ struct InsightsView: View {
     private func generateCommentary() async {
         guard !isGenerating else { return }
         isGenerating = true
-        commentary = await InsightsNarrativeGenerator.generate(report: report, intensity: intensity)
+        commentary = await InsightsNarrativeGenerator.generate(
+            report: report,
+            intensity: intensity,
+            provider: commentaryModels.selectedProvider
+        )
         isGenerating = false
     }
 }

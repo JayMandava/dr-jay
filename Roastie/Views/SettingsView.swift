@@ -156,9 +156,9 @@ struct SettingsView: View {
                         EmptyView()
                     }
                 } header: {
-                    Text("Brain Dump")
+                    Text("Extended Commentary")
                 } footer: {
-                    Text("Apple Intelligence remains the default. Gemma is an optional 2.59 GB download, runs entirely on device, and is excluded from backups. Conversations are never saved.")
+                    Text("Used by Brain Dump, Daily Report, and Insights. Apple Intelligence remains the default. Gemma is an optional 2.59 GB download, runs entirely on device, and is excluded from backups. Conversations and generated commentary are never saved.")
                 }
 
                 Section {

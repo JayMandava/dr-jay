@@ -43,11 +43,11 @@ is shown explicitly and marks the report incomplete. Overall scores use
 **Good (80–100), Bad (60–79), and Ugly (0–59)**.
 
 The report can be generated on demand from Today. Its score, verdict, and
-calculation remain fixed; Apple's on-device model writes only Dr Jay's
+calculation remain fixed; the selected on-device model writes only Dr Jay's
 commentary. Good receives reluctant clinical approval, Bad roasts the weakest
 major factor, and Ugly receives the sharper clinical roast. The model
 is instructed not to repeat the visible score, weights, or metric list. A
-local verdict-aware fallback is used when Apple Intelligence is unavailable.
+local verdict- and intensity-aware fallback is used when generation is unavailable.
 
 At 10 p.m., a local notification delivers the latest deterministic report
 available when it was scheduled. The notification does not depend on the
@@ -61,8 +61,9 @@ logged, exported, or included in backups. Deterministic local routing blocks
 prompt extraction, medical instructions, vulnerable beliefs, immediate-risk
 content, and unrelated task requests before generation.
 
-Apple Intelligence is the default responder. **Settings → Brain Dump** can
-optionally download and select Gemma 4 E2B. The 2.59 GB LiteRT-LM artifact is
+Apple Intelligence is the default responder. **Settings → Extended Commentary** can
+optionally download and select Gemma 4 E2B for Brain Dump, Daily Report, and
+Insights. The 2.59 GB LiteRT-LM artifact is
 downloaded in the background, excluded from backups, and activated only after
 its exact byte count, file signature, SHA-256 checksum, and LiteRT engine
 initialization all succeed. Interrupted transfers retain resumable download
@@ -77,8 +78,8 @@ sleep and water goals were completed; food and steps do not affect streaks.
 
 **Dr Jay Insights** in History computes private 7-day and 30-day views from
 the existing log. Swift calculates coverage, goal adherence, direction,
-exposure totals, priorities, and cautiously worded patterns; Apple
-Intelligence only interprets those fixed facts. Trends require at least seven
+exposure totals, priorities, and cautiously worded patterns; the selected
+on-device model only interprets those fixed facts. Trends require at least seven
 logged days in both comparison windows, generated commentary is not stored,
 and steps remain excluded because historical step totals are never persisted.
 
@@ -87,9 +88,9 @@ and steps remain excluded because historical step totals are never persisted.
 - Health access is read-only.
 - Roasts and food analysis use Apple's Foundation Models on device; food logs
   and health data are not sent to a server.
-- Brain Dump inference stays on device with either Apple Intelligence or the
-  optional Gemma model. The model file and provider preference are separate
-  from the deliberately non-persistent conversation.
+- Brain Dump, Daily Report, and Insights inference stays on device with either
+  Apple Intelligence or the optional Gemma model. The model file and provider
+  preference are separate from deliberately non-persistent generated text.
 - Sleep and water roasts use a curated local fallback bank when Apple
   Intelligence is unavailable. Food remains safely logged as unanalyzed when
   the model is unavailable and can be classified manually from History.
@@ -111,7 +112,7 @@ and steps remain excluded because historical step totals are never persisted.
 - **FoundationModels** for on-device food analysis and Dr Jay's generated
   roast, approval, and manual daily-report commentary, with gentle, playful,
   and spicy intensity levels.
-- **LiteRT-LM** for the optional Gemma 4 E2B Brain Dump responder. Apple
+- **LiteRT-LM** for optional Gemma 4 E2B extended commentary. Apple
   Intelligence remains the default because Gemma requires roughly 2.59 GB of
   storage and substantially more runtime memory.
 - **HealthKit** for read-only sleep import and an ephemeral current-day step

@@ -223,6 +223,7 @@ enum FoodAnalyzer {
     private static func entryInstructions(intensity: RoastIntensity) -> String {
         """
         \(drJayPersona(intensity: intensity))
+        \(intensityRule(intensity))
 
         Assess one plain-language food entry using ordinary nutritional principles.
         Classify it as healthy or unhealthy. Healthy means generally balanced and nutrient-dense;
@@ -282,6 +283,7 @@ enum FoodAnalyzer {
     ) -> String {
         """
         \(drJayPersona(intensity: intensity))
+        \(intensityRule(intensity))
 
         The app has already calculated today's order-independent food score as \(score), classified
         as \(band.rawValue). Treat that score and classification as fixed; do not recalculate or
@@ -304,6 +306,18 @@ enum FoodAnalyzer {
             "You are Dr Jay: clinically precise, acerbic, dry, and unimpressed by excuses."
         case .spicy:
             "You are Dr Jay at maximum intensity: ruthless about choices, clinically precise, and thoroughly unimpressed."
+        }
+    }
+
+    @available(iOS 26.0, *)
+    private static func intensityRule(_ intensity: RoastIntensity) -> String {
+        switch intensity {
+        case .gentle:
+            "Gentle means a restrained but recognizable dry barb; it must not become generic encouragement."
+        case .playful:
+            "Playful means one unmistakable, clever clinical roast aimed at the food choice."
+        case .spicy:
+            "Spicy means the sharpest permitted roast of the food choice, without attacking the person."
         }
     }
 

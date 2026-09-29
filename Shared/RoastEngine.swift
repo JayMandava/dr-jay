@@ -218,18 +218,38 @@ enum RoastEngine {
     }
 
     private static func hypeLines(_ context: NudgeContext) -> [String] {
-        switch context.kind {
-        case .sleep:
+        switch (context.kind, context.intensity) {
+        case (.sleep, .gentle):
+            return [
+                "\(context.detail). Vitals look good. Quietly competent for once.",
+                "\(context.detail). Proper recovery. Keep the chart this boring.",
+            ]
+        case (.sleep, .playful):
             return [
                 "\(context.detail). Vitals look good. Try not to ruin it tomorrow.",
                 "\(context.detail). Rested and functional — rare, for you.",
                 "\(context.detail). Textbook recovery. Don't let it go to your head.",
             ]
-        case .water:
+        case (.sleep, .spicy):
+            return [
+                "\(context.detail). You followed basic medical logic. Alert the journals.",
+                "\(context.detail). Functional sleep, despite your history of creative self-sabotage.",
+            ]
+        case (.water, .gentle):
+            return [
+                "\(context.detail). Hydration handled. The kidneys may stand down.",
+                "\(context.detail). A sensible amount of water. Keep surprising the chart.",
+            ]
+        case (.water, .playful):
             return [
                 "\(context.detail). Properly hydrated. Try to act like it's normal.",
                 "\(context.detail). Someone's finally treating the patient right.",
                 "\(context.detail). Hydration's handled. One fewer thing to diagnose.",
+            ]
+        case (.water, .spicy):
+            return [
+                "\(context.detail). You drank enough water. Basic maintenance has never looked so heroic.",
+                "\(context.detail). The kidneys survived your management. An unlikely success.",
             ]
         }
     }

@@ -21,6 +21,7 @@ struct TodayView: View {
     @State private var reportResult: DailySummaryResult?
     @State private var reportCommentary: String?
     @State private var isGeneratingReport = false
+    @State private var commentaryModels = BrainDumpModelManager.shared
 
     private var today: DailyLog? { logs.first { $0.dayKey == Date().dayKey } }
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
@@ -257,7 +258,7 @@ struct TodayView: View {
     }
 
     private var dailySummary: DailySummaryResult {
-        DailySummaryCalculator.calculate(dailySummaryInput)
+        DailySummaryCalculator.calculate(dailySummaryInput, intensity: settings.roastIntensity)
     }
 
     private var dailySummaryInput: DailySummaryInput {
@@ -277,12 +278,13 @@ struct TodayView: View {
 
         await refreshSteps()
         let input = dailySummaryInput
-        let result = DailySummaryCalculator.calculate(input)
+        let result = DailySummaryCalculator.calculate(input, intensity: settings.roastIntensity)
         reportResult = result
         reportCommentary = await DailyReportGenerator.generate(
             input: input,
             result: result,
-            intensity: settings.roastIntensity
+            intensity: settings.roastIntensity,
+            provider: commentaryModels.selectedProvider
         )
         isGeneratingReport = false
     }
