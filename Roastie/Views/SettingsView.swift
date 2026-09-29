@@ -48,7 +48,7 @@ struct SettingsView: View {
                     Stepper("Bottle size: \(settings.bottleSizeMl) ml", value: $settings.bottleSizeMl, in: 250...1500, step: 250)
                 }
 
-                Section("Sleep") {
+                Section("Apple Health") {
                     Text("Healthy range is fixed at 6–9 hours.")
                         .foregroundStyle(.secondary)
                     Toggle("Read sleep from Health", isOn: Binding(
@@ -69,6 +69,21 @@ struct SettingsView: View {
                             }
                         }
                     ))
+
+                    Button {
+                        Task {
+                            do {
+                                try await HealthKitManager.shared.requestStepAuthorization()
+                                healthKitError = nil
+                            } catch {
+                                AppLogger.report(error, operation: "Request step access", logger: AppLogger.health)
+                                healthKitError = error.localizedDescription
+                            }
+                        }
+                    } label: {
+                        Label("Connect Step Data", systemImage: "figure.walk")
+                    }
+
                     if let healthKitError {
                         Text(healthKitError).font(.caption).foregroundStyle(.red)
                     }

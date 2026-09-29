@@ -122,8 +122,7 @@ struct TodayView: View {
                     StepCountCard(
                         stepCount: stepCount,
                         isLoading: isLoadingSteps,
-                        loadFinished: stepLoadFinished,
-                        onConnect: connectSteps
+                        loadFinished: stepLoadFinished
                     )
 
                     Button {
@@ -314,19 +313,6 @@ struct TodayView: View {
         }
     }
 
-    private func connectSteps() {
-        Task {
-            isLoadingSteps = true
-            do {
-                try await HealthKitManager.shared.requestStepAuthorization()
-            } catch {
-                AppLogger.report(error, operation: "Request step access", logger: AppLogger.health)
-            }
-            await refreshSteps()
-            await DayCoordinator.shared.refreshToday()
-        }
-    }
-
     private var currentStreakLabel: String {
         streakStats.current > 0
             ? "\(streakStats.current)-day streak"
@@ -379,7 +365,6 @@ private struct StepCountCard: View {
     let stepCount: Int?
     let isLoading: Bool
     let loadFinished: Bool
-    let onConnect: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -407,14 +392,6 @@ private struct StepCountCard: View {
                 Text("Today · Apple Health")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            if stepCount == nil, loadFinished, !isLoading {
-                Button("Connect", action: onConnect)
-                    .buttonStyle(.glass)
-                    .tint(DrJayTheme.primary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
