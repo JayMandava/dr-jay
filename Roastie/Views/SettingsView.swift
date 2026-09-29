@@ -16,6 +16,8 @@ struct SettingsView: View {
     @State private var importResultMessage: String?
     @State private var isImporting = false
     @State private var brainDumpModels = BrainDumpModelManager.shared
+    @State private var stepAccessState: StepAccessState?
+    @State private var isRequestingStepAccess = false
 
     var body: some View {
         NavigationStack {
@@ -70,23 +72,32 @@ struct SettingsView: View {
                         }
                     ))
 
-                    Button {
-                        Task {
-                            do {
-                                try await HealthKitManager.shared.requestStepAuthorization()
-                                healthKitError = nil
-                            } catch {
-                                AppLogger.report(error, operation: "Request step access", logger: AppLogger.health)
-                                healthKitError = error.localizedDescription
+                    LabeledContent {
+                        Label(stepAccessLabel, systemImage: stepAccessIcon)
+                            .foregroundStyle(stepAccessColor)
+                    } label: {
+                        Label("Step data", systemImage: "figure.walk")
+                    }
+
+                    if stepAccessState == .requestNeeded {
+                        Button {
+                            requestStepAccess()
+                        } label: {
+                            if isRequestingStepAccess {
+                                Label("Requesting Access…", systemImage: "hourglass")
+                            } else {
+                                Label("Request Step Access", systemImage: "heart.text.clipboard")
                             }
                         }
-                    } label: {
-                        Label("Connect Step Data", systemImage: "figure.walk")
+                        .disabled(isRequestingStepAccess)
                     }
 
                     if let healthKitError {
                         Text(healthKitError).font(.caption).foregroundStyle(.red)
                     }
+                }
+                .task {
+                    await refreshStepAccessState()
                 }
 
                 Section("Check-in times") {
@@ -326,6 +337,59 @@ struct SettingsView: View {
             }
         }
         .preferredColorScheme(appearance.colorScheme)
+    }
+
+    private var stepAccessLabel: String {
+        switch stepAccessState {
+        case .connected: "Connected"
+        case .accessRequested: "Access requested"
+        case .requestNeeded: "Not connected"
+        case .unavailable: "Unavailable"
+        case nil: "Checking…"
+        }
+    }
+
+    private var stepAccessIcon: String {
+        switch stepAccessState {
+        case .connected: "checkmark.circle.fill"
+        case .accessRequested: "checkmark.circle"
+        case .requestNeeded: "exclamationmark.circle"
+        case .unavailable: "xmark.circle"
+        case nil: "ellipsis.circle"
+        }
+    }
+
+    private var stepAccessColor: Color {
+        switch stepAccessState {
+        case .connected: .green
+        case .requestNeeded: DrJayTheme.roast
+        default: .secondary
+        }
+    }
+
+    private func requestStepAccess() {
+        guard !isRequestingStepAccess else { return }
+        isRequestingStepAccess = true
+        Task {
+            defer { isRequestingStepAccess = false }
+            do {
+                try await HealthKitManager.shared.requestStepAuthorization()
+                healthKitError = nil
+            } catch {
+                AppLogger.report(error, operation: "Request step access", logger: AppLogger.health)
+                healthKitError = error.localizedDescription
+            }
+            await refreshStepAccessState()
+        }
+    }
+
+    private func refreshStepAccessState() async {
+        do {
+            stepAccessState = try await HealthKitManager.shared.stepAccessState()
+        } catch {
+            AppLogger.report(error, operation: "Check step access", logger: AppLogger.health)
+            healthKitError = error.localizedDescription
+        }
     }
 
     @ViewBuilder
