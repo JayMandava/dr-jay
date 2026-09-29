@@ -45,7 +45,7 @@ is shown explicitly and marks the report incomplete. Overall scores use
 The report can be generated on demand from Today. Its score, verdict, and
 calculation remain fixed; Apple's on-device model writes only Dr Jay's
 commentary. Good receives reluctant clinical approval, Bad roasts the weakest
-major factor, and Ugly receives the sharper House-style diagnosis. The model
+major factor, and Ugly receives the sharper clinical roast. The model
 is instructed not to repeat the visible score, weights, or metric list. A
 local verdict-aware fallback is used when Apple Intelligence is unavailable.
 
