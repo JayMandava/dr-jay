@@ -3,11 +3,31 @@ import SwiftData
 
 struct HistoryView: View {
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
+    @State private var settings = SharedStore.loadSettings()
 
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
 
     var body: some View {
         List {
+            Section {
+                NavigationLink {
+                    InsightsView(intensity: settings.roastIntensity)
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Dr Jay Insights")
+                                .font(.headline)
+                            Text("7 and 30-day patterns, priorities, and direction")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "chart.xyaxis.line")
+                            .foregroundStyle(DrJayTheme.primary)
+                    }
+                }
+            }
+
             Section("Consistency") {
                 HStack(spacing: 0) {
                     metric(value: streakStats.current, label: "Current")

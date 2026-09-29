@@ -75,6 +75,13 @@ contains the detailed daily record, food entries, corrections, and previous
 check-ins. Current and longest streaks count consecutive days on which both
 sleep and water goals were completed; food and steps do not affect streaks.
 
+**Dr Jay Insights** in History computes private 7-day and 30-day views from
+the existing log. Swift calculates coverage, goal adherence, direction,
+exposure totals, priorities, and cautiously worded patterns; Apple
+Intelligence only interprets those fixed facts. Trends require at least seven
+logged days in both comparison windows, generated commentary is not stored,
+and steps remain excluded because historical step totals are never persisted.
+
 ## Privacy and resilience
 
 - Health access is read-only.
