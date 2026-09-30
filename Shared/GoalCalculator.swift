@@ -25,8 +25,8 @@ enum GoalCalculator {
     }
 
     static func sleepDetail(hours: Double?) -> String {
-        guard let hours else { return "no sleep data yet" }
-        return "slept \(formatted(hours))h (target \(formatted(AppConfig.sleepGoalHours))–\(formatted(AppConfig.sleepGoalMaxHours))h)"
+        guard let hours else { return "No sleep data yet" }
+        return "Slept \(formatted(hours))h"
     }
 
     static func waterDetail(bottlesLogged: Int, goal: Int) -> String {
