@@ -107,11 +107,6 @@ struct TodayView: View {
                         }
                     )
 
-                    ExerciseTodayCard(summary: exerciseSummary) {
-                        Haptics.tap()
-                        showExerciseSheet = true
-                    }
-
                     HStack {
                         CounterRingView(
                             value: exposureValue(foodExposureTotals.caffeineCount),
@@ -134,6 +129,11 @@ struct TodayView: View {
                         isLoading: isLoadingSteps,
                         loadFinished: stepLoadFinished
                     )
+
+                    ExerciseTodayCard(summary: exerciseSummary) {
+                        Haptics.tap()
+                        showExerciseSheet = true
+                    }
 
                     Button {
                         Haptics.tap()
