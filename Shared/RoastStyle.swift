@@ -219,7 +219,7 @@ private enum RoastTopic: CaseIterable {
         case .sleep: ["sleep", "slept", "bedtime", "rest", "recovery", "night", "mattress", "pillow", "exhaustion"]
         case .water: ["water", "hydration", "hydrate", "bottle", "bottles", "kidney", "kidneys", "drink", "drinking"]
         case .food: ["food", "meal", "meals", "menu", "plate", "pantry", "nutrition", "nutritional", "dietary", "eat", "ate", "snack", "snacks"]
-        case .steps: ["step", "steps", "walking", "walk", "movement"]
+        case .steps: ["step", "steps", "walking", "walk", "movement", "exercise", "workout", "gym", "run", "running"]
         }
     }
 }

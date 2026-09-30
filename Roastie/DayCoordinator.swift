@@ -250,6 +250,34 @@ final class DayCoordinator {
         await refreshFoodScore(for: log, intensity: SharedStore.loadSettings().roastIntensity)
     }
 
+    @discardableResult
+    func logExercise(_ description: String) async -> ExerciseEntry? {
+        guard let entry = ExerciseAnalyzer.entry(from: description) else { return nil }
+        let log = todayLog()
+        var entries = log.exerciseEntries ?? []
+        entries.append(entry)
+        log.exerciseEntries = entries
+        saveContext(operation: "Log exercise entry")
+
+        let settings = SharedStore.loadSettings()
+        await pushSnapshot(log: log, settings: settings)
+        persistBackup()
+        return entry
+    }
+
+    func deleteExerciseEntry(entryID: UUID, dayKey: String) async {
+        guard let log = log(for: dayKey), var entries = log.exerciseEntries else { return }
+        entries.removeAll { $0.id == entryID }
+        log.exerciseEntries = entries
+        saveContext(operation: "Delete exercise entry")
+
+        let settings = SharedStore.loadSettings()
+        if dayKey == Date().dayKey {
+            await pushSnapshot(log: log, settings: settings)
+        }
+        persistBackup()
+    }
+
     func forgetFoodCorrectionMemory(id: UUID) {
         var memories = SharedStore.loadFoodCorrectionMemories()
         memories.removeAll { $0.id == id }
@@ -570,7 +598,9 @@ final class DayCoordinator {
             waterBottlesLogged: log.waterBottlesLogged,
             waterGoalBottles: log.waterGoalBottles,
             foodScore: log.foodScore,
-            steps: steps
+            steps: steps,
+            exerciseMinutes: ExerciseAnalyzer.summary(entries: log.exerciseEntries ?? []).scoredMinutes,
+            exerciseEntryCount: (log.exerciseEntries ?? []).count
         )
         await NotificationManager.rescheduleAll(
             settings: settings,

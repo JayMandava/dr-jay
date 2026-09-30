@@ -86,6 +86,33 @@ struct FoodEntry: Codable, Hashable, Identifiable, Sendable {
     var sugaryItemCount: Int? = nil
 }
 
+enum ExerciseCategory: String, Codable, CaseIterable, Hashable, Sendable {
+    case cardio
+    case strength
+    case mobility
+    case sport
+    case other
+
+    var label: String {
+        switch self {
+        case .cardio: "Cardio"
+        case .strength: "Strength"
+        case .mobility: "Mobility"
+        case .sport: "Sport"
+        case .other: "Exercise"
+        }
+    }
+}
+
+struct ExerciseEntry: Codable, Hashable, Identifiable, Sendable {
+    var id: UUID = UUID()
+    var text: String
+    var timestamp: Date
+    var category: ExerciseCategory
+    /// Only an explicit duration in the user's text is stored and scored.
+    var durationMinutes: Int?
+}
+
 enum FoodScoreBand: String, Codable, Equatable, Sendable {
     case good = "Good"
     case bad = "Bad"
@@ -120,6 +147,8 @@ final class DailyLog {
     var foodScoreSummary: String?
     var foodScoreIsCurrent: Bool?
     var foodScoreVersion: Int?
+    /// Optional keeps existing SwiftData stores migratable.
+    var exerciseEntries: [ExerciseEntry]?
 
     init(dayKey: String, date: Date, waterGoalBottles: Int) {
         self.dayKey = dayKey
@@ -135,6 +164,7 @@ final class DailyLog {
         self.foodScoreSummary = nil
         self.foodScoreIsCurrent = true
         self.foodScoreVersion = FoodScoreCalculator.version
+        self.exerciseEntries = []
     }
 
     var sleepGoalMet: Bool? {

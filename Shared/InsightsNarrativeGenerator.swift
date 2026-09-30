@@ -152,15 +152,18 @@ enum InsightsNarrativeGenerator {
             )
         }
 
-        let directions = report.metrics.map(\.direction)
+        let exerciseFact = report.metrics.first { $0.id == "exercise" && $0.value != "—" }
+            .map { " Optional exercise log: \($0.value) session\($0.value == "1" ? "" : "s"), \($0.detail)." }
+            ?? ""
+        let directions = report.metrics.filter { $0.id != "exercise" }.map(\.direction)
         if directions.contains(.slipping) {
-            return ("At least one core metric is slipping.", report.recommendedAction, .slipping)
+            return ("At least one core metric is slipping.\(exerciseFact)", report.recommendedAction, .slipping)
         }
         if directions.contains(.improving) {
-            return ("The overall direction is improving.", report.recommendedAction, .improving)
+            return ("The overall direction is improving.\(exerciseFact)", report.recommendedAction, .improving)
         }
         if report.hasComparisonBaseline {
-            return ("The overall pattern is steady.", report.recommendedAction, .steady)
+            return ("The overall pattern is steady.\(exerciseFact)", report.recommendedAction, .steady)
         }
         return (
             "The current baseline is usable, but comparison history is still thin.",
@@ -193,6 +196,7 @@ enum InsightsNarrativeGenerator {
         case .steady: return .trendSteady
         case .slipping: return .trendSlipping
         case .buildingBaseline: return .baselineThin
+        case .context: return .baselineThin
         }
     }
 

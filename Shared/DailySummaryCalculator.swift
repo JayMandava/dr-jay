@@ -6,6 +6,8 @@ struct DailySummaryInput: Equatable, Sendable {
     let waterGoalBottles: Int
     let foodScore: Int?
     let steps: Int?
+    let exerciseMinutes: Int?
+    let exerciseEntryCount: Int
 }
 
 struct DailySummaryResult: Equatable, Sendable {
@@ -53,9 +55,12 @@ enum DailySummaryCalculator {
             weightedScores.append((Double(foodScore.clamped(to: 0...100)), 0.35))
         }
 
-        if let steps = input.steps {
-            let stepScore = min(1, Double(max(0, steps)) / stepReference) * 100
-            weightedScores.append((stepScore, 0.05))
+        let stepScore = input.steps.map {
+            min(1, Double(max(0, $0)) / stepReference) * 100
+        }
+        let exerciseScore = ExerciseAnalyzer.score(minutes: input.exerciseMinutes)
+        if let movementScore = [stepScore, exerciseScore].compactMap({ $0 }).max() {
+            weightedScores.append((movementScore, 0.05))
         }
 
         let totalWeight = weightedScores.reduce(0) { $0 + $1.weight }
@@ -87,7 +92,15 @@ enum DailySummaryCalculator {
         let water = "Water \(max(0, input.waterBottlesLogged))/\(max(1, input.waterGoalBottles))"
         let food = input.foodScore.map { "Food \($0.clamped(to: 0...100))" } ?? "Food —"
         let steps = input.steps.map { "Steps \($0.formatted())" } ?? "Steps —"
-        return [sleep, water, food, steps].joined(separator: " · ")
+        let exercise: String?
+        if let minutes = input.exerciseMinutes {
+            exercise = "Exercise \(minutes)m"
+        } else if input.exerciseEntryCount > 0 {
+            exercise = "Exercise logged"
+        } else {
+            exercise = nil
+        }
+        return [sleep, water, food, steps, exercise].compactMap { $0 }.joined(separator: " · ")
     }
 
     private static func roast(

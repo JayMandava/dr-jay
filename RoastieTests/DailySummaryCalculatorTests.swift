@@ -53,6 +53,38 @@ final class DailySummaryCalculatorTests: XCTestCase {
         XCTAssertEqual(fullSteps.score - noSteps.score, 5)
     }
 
+    func testExerciseCanSupplyMovementWithoutSteps() {
+        let result = DailySummaryCalculator.calculate(input(
+            sleep: 7,
+            water: 4,
+            goal: 4,
+            food: 100,
+            steps: nil,
+            exerciseMinutes: 30,
+            exerciseEntries: 1
+        ))
+
+        XCTAssertEqual(result.score, 100)
+        XCTAssertTrue(result.detail.contains("Exercise 30m"))
+    }
+
+    func testExerciseAndStepsAreNotDoubleCounted() {
+        let stepsOnly = DailySummaryCalculator.calculate(input(
+            sleep: 7, water: 4, goal: 4, food: 100, steps: 8_000
+        ))
+        let both = DailySummaryCalculator.calculate(input(
+            sleep: 7,
+            water: 4,
+            goal: 4,
+            food: 100,
+            steps: 8_000,
+            exerciseMinutes: 30,
+            exerciseEntries: 1
+        ))
+
+        XCTAssertEqual(both.score, stepsOnly.score)
+    }
+
     func testMissingCoreMetricMakesReportIncomplete() {
         let result = DailySummaryCalculator.calculate(input(
             sleep: nil,
@@ -88,14 +120,18 @@ final class DailySummaryCalculatorTests: XCTestCase {
         water: Int,
         goal: Int,
         food: Int?,
-        steps: Int?
+        steps: Int?,
+        exerciseMinutes: Int? = nil,
+        exerciseEntries: Int = 0
     ) -> DailySummaryInput {
         DailySummaryInput(
             sleepHours: sleep,
             waterBottlesLogged: water,
             waterGoalBottles: goal,
             foodScore: food,
-            steps: steps
+            steps: steps,
+            exerciseMinutes: exerciseMinutes,
+            exerciseEntryCount: exerciseEntries
         )
     }
 }

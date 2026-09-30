@@ -173,7 +173,7 @@ struct InsightsView: View {
         switch metric.direction {
         case .improving: DrJayTheme.primary
         case .slipping: DrJayTheme.roast
-        case .steady, .buildingBaseline: DrJayTheme.muted
+        case .steady, .buildingBaseline, .context: DrJayTheme.muted
         }
     }
 

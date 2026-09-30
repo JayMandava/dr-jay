@@ -10,6 +10,7 @@ struct TodayView: View {
     @State private var showSettings = false
     @State private var showSleepSheet = false
     @State private var showFoodSheet = false
+    @State private var showExerciseSheet = false
     @State private var showBrainDump = false
     @State private var isLoggingWater = false
     @State private var loggedFoodResult: FoodEntry?
@@ -27,6 +28,9 @@ struct TodayView: View {
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
     private var foodExposureTotals: FoodExposureTotals {
         FoodExposureCalculator.totals(entries: today?.foodEntries ?? [])
+    }
+    private var exerciseSummary: ExerciseSummary {
+        ExerciseAnalyzer.summary(entries: today?.exerciseEntries ?? [])
     }
 
     var body: some View {
@@ -102,6 +106,11 @@ struct TodayView: View {
                             showFoodSheet = true
                         }
                     )
+
+                    ExerciseTodayCard(summary: exerciseSummary) {
+                        Haptics.tap()
+                        showExerciseSheet = true
+                    }
 
                     HStack {
                         CounterRingView(
@@ -212,6 +221,11 @@ struct TodayView: View {
                     }
                 )
             }
+            .sheet(isPresented: $showExerciseSheet) {
+                LogExerciseSheet { description in
+                    await DayCoordinator.shared.logExercise(description)
+                }
+            }
             .fullScreenCover(isPresented: $showBrainDump) {
                 BrainDumpView()
             }
@@ -267,7 +281,9 @@ struct TodayView: View {
             waterBottlesLogged: today?.waterBottlesLogged ?? 0,
             waterGoalBottles: today?.waterGoalBottles ?? settings.waterGoalBottles,
             foodScore: today?.foodScoreIsCurrent == true ? today?.foodScore : nil,
-            steps: stepCount
+            steps: stepCount,
+            exerciseMinutes: exerciseSummary.scoredMinutes,
+            exerciseEntryCount: exerciseSummary.entryCount
         )
     }
 
@@ -439,8 +455,8 @@ private struct DailyReportSheet: View {
                             WeightRow(label: "Food", weight: "35%", icon: "fork.knife", color: DrJayTheme.primary)
                             WeightRow(label: "Sleep", weight: "30%", icon: "moon.zzz.fill", color: DrJayTheme.sleep)
                             WeightRow(label: "Water", weight: "30%", icon: "drop.fill", color: DrJayTheme.water)
-                            WeightRow(label: "Steps", weight: "5%", icon: "figure.walk", color: DrJayTheme.muted)
-                            Text("Missing metrics are excluded and the available weights are proportionally normalized. Missing steps never reduce the score.")
+                            WeightRow(label: "Movement", weight: "5%", icon: "figure.run", color: DrJayTheme.muted)
+                            Text("Movement uses the stronger of today’s Health steps or explicitly logged exercise minutes. Missing movement data never reduces the score.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

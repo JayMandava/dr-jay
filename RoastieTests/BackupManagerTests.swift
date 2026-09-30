@@ -30,6 +30,12 @@ final class BackupManagerTests: XCTestCase {
         source.foodScoreSummary = "The vegetables have staged a competent intervention."
         source.foodScoreIsCurrent = true
         source.foodScoreVersion = FoodScoreCalculator.version
+        source.exerciseEntries = [ExerciseEntry(
+            text: "30-minute run",
+            timestamp: TestSupport.date(23, hour: 18),
+            category: .cardio,
+            durationMinutes: 30
+        )]
         let memory = FoodCorrectionMemory(
             normalizedText: "vegetable dosa",
             displayText: "Vegetable dosa",
@@ -60,6 +66,7 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertEqual(restored.foodScoreSummary, source.foodScoreSummary)
         XCTAssertEqual(restored.foodScoreIsCurrent, true)
         XCTAssertEqual(restored.foodScoreVersion, FoodScoreCalculator.version)
+        XCTAssertEqual(restored.exerciseEntries, source.exerciseEntries)
         XCTAssertEqual(payload.foodCorrectionMemories, [memory])
     }
 
@@ -95,6 +102,7 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertNil(restored.foodScoreSummary)
         XCTAssertEqual(restored.foodScoreIsCurrent, false)
         XCTAssertNil(restored.foodScoreVersion)
+        XCTAssertEqual(restored.exerciseEntries, [])
         XCTAssertNil(payload.foodCorrectionMemories)
     }
 

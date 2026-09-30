@@ -81,7 +81,7 @@ struct OnboardingView: View {
 
     private var subtitle: String {
         switch step {
-        case 0: "Dr Jay keeps you honest about sleep, water, and food — with private, on-device intelligence and a bedside manner problem."
+        case 0: "Dr Jay keeps you honest about sleep, water, food, and any exercise you choose to log — with private, on-device intelligence and a bedside manner problem."
         case 1: "Every morning, afternoon, and night, Dr Jay checks whether you landed in the healthy 6–9 hour range."
         case 2: "Log a bottle every time you finish one. Dr Jay keeps checking until you hit the full daily goal."
         case 3: "Log what you ate in plain language. Unhealthy choices get an immediate roast, and your day earns a Good, Bad, or Ugly score."

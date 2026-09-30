@@ -104,6 +104,29 @@ final class LongitudinalInsightsCalculatorTests: XCTestCase {
         XCTAssertEqual(report.metrics.first { $0.id == "food" }?.direction, .buildingBaseline)
     }
 
+    func testExerciseIsReportedWithoutBecomingAWeakestMetric() {
+        let reference = date(2026, 9, 29)
+        let log = log(daysBefore: 0, reference: reference, sleep: 7, water: 4, food: 90)
+        log.exerciseEntries = [ExerciseEntry(
+            text: "30-minute run",
+            timestamp: reference,
+            category: .cardio,
+            durationMinutes: 30
+        )]
+
+        let report = LongitudinalInsightsCalculator.calculate(
+            logs: [log],
+            period: .sevenDays,
+            referenceDate: reference,
+            calendar: calendar
+        )
+
+        let exercise = report.metrics.first { $0.id == "exercise" }
+        XCTAssertEqual(exercise?.value, "1")
+        XCTAssertEqual(exercise?.direction, .context)
+        XCTAssertNotEqual(report.primaryFocus, "Exercise")
+    }
+
     private func log(
         daysBefore: Int,
         reference: Date,

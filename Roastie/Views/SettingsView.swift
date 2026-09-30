@@ -224,21 +224,21 @@ struct SettingsView: View {
                 } header: {
                     Text("Data")
                 } footer: {
-                    Text("A free (non-paid) developer install expires after 7 days. Export a backup before that happens, and import it after reinstalling to keep your history and learned food corrections.")
+                    Text("A free (non-paid) developer install expires after 7 days. Export a backup before that happens, and import it after reinstalling to keep your history, exercise logs, and learned food corrections.")
                 }
 
                 Section("About") {
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Dr Jay", systemImage: "stethoscope")
                             .font(.headline)
-                        Text("Sleep, water, food, caffeine, sugary items, and a lightweight step check—with clinical honesty and an unhealthy amount of sarcasm.")
+                        Text("Sleep, water, food, optional exercise, caffeine, sugary items, and a lightweight step check—with clinical honesty and an unhealthy amount of sarcasm.")
                             .foregroundStyle(.secondary)
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Private by design", systemImage: "lock.shield")
                             .font(.headline)
-                        Text("Roasts, food analysis, and learned corrections stay on device. Health access is read-only. Today's step count is displayed but never stored or exported.")
+                        Text("Roasts, food analysis, exercise logs, and learned corrections stay on device. Health access is read-only. Today's step count is displayed but never stored or exported.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -250,7 +250,7 @@ struct SettingsView: View {
 
                     aboutDetail(
                         "Daily report",
-                        detail: "Food 35% · Sleep 30% · Water 30% · Steps 5%"
+                        detail: "Food 35% · Sleep 30% · Water 30% · Movement 5%"
                     )
 
                     Text("Generate a full report anytime from Today. The score uses fixed arithmetic; only Dr Jay’s commentary is written by the on-device model.")
@@ -272,7 +272,7 @@ struct SettingsView: View {
                     }
                     .disabled(isResetting)
                 } footer: {
-                    Text("Erases all logged history, learned food corrections, streaks, and settings, and starts onboarding over. This can't be undone.")
+                    Text("Erases all logged history, including exercise, learned food corrections, streaks, and settings, and starts onboarding over. This can't be undone.")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -297,7 +297,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This deletes all sleep, water, and food history, learned food corrections, your streak, and every setting. It can't be undone.")
+                Text("This deletes all sleep, water, food, and exercise history, learned food corrections, your streak, and every setting. It can't be undone.")
             }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
                 switch result {

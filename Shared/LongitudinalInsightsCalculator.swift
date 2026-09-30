@@ -13,6 +13,7 @@ enum InsightDirection: Equatable, Sendable {
     case steady
     case slipping
     case buildingBaseline
+    case context
 
     var label: String {
         switch self {
@@ -20,6 +21,7 @@ enum InsightDirection: Equatable, Sendable {
         case .steady: "Steady"
         case .slipping: "Slipping"
         case .buildingBaseline: "Building baseline"
+        case .context: "Optional log"
         }
     }
 
@@ -29,6 +31,7 @@ enum InsightDirection: Equatable, Sendable {
         case .steady: "equal"
         case .slipping: "arrow.down.right"
         case .buildingBaseline: "clock"
+        case .context: "figure.run"
         }
     }
 }
@@ -131,8 +134,9 @@ enum LongitudinalInsightsCalculator {
             previous: previousTracked,
             hasComparison: hasComparison
         )
-        let metrics = [sleepMetric, waterMetric, foodMetric]
-        let focus = primaryFocus(metrics: metrics)
+        let exerciseMetric = exerciseMetric(current: currentTracked)
+        let metrics = [sleepMetric, waterMetric, foodMetric, exerciseMetric]
+        let focus = primaryFocus(metrics: metrics.filter { $0.id != "exercise" })
         let exposures = currentTracked.compactMap(\.exposure)
 
         return LongitudinalInsightReport(
@@ -233,6 +237,34 @@ enum LongitudinalInsightsCalculator {
         )
     }
 
+    private static func exerciseMetric(current: [Day]) -> InsightMetric {
+        let entries = current.flatMap(\.exerciseEntries)
+        guard !entries.isEmpty else {
+            return InsightMetric(
+                id: "exercise",
+                title: "Exercise",
+                value: "—",
+                detail: "No optional exercise entries in this window",
+                score: nil,
+                direction: .context
+            )
+        }
+
+        let summary = ExerciseAnalyzer.summary(entries: entries)
+        let leadingCategory = Dictionary(grouping: entries, by: \.category)
+            .max { $0.value.count < $1.value.count }?.key.label
+        let duration = summary.scoredMinutes.map { "\($0) min" } ?? "Duration unavailable"
+        let category = leadingCategory.map { " · Most logged: \($0)" } ?? ""
+        return InsightMetric(
+            id: "exercise",
+            title: "Exercise",
+            value: "\(summary.entryCount)",
+            detail: "\(duration) across optional logs\(category)",
+            score: nil,
+            direction: .context
+        )
+    }
+
     private static func primaryFocus(metrics: [InsightMetric]) -> (name: String, action: String) {
         guard let weakest = metrics.compactMap({ metric in
             metric.score.map { (metric, $0) }
@@ -317,6 +349,7 @@ enum LongitudinalInsightsCalculator {
         let exposure: Exposure?
         let exposureIsComplete: Bool
         let hasCaffeineAfterFourPM: Bool
+        let exerciseEntries: [ExerciseEntry]
         let hasTrackedData: Bool
 
         var isCoreComplete: Bool { sleepHours != nil && foodScore != nil }
@@ -339,10 +372,12 @@ enum LongitudinalInsightsCalculator {
             hasCaffeineAfterFourPM = entries.contains { entry in
                 (entry.caffeineCount ?? 0) > 0 && calendar.component(.hour, from: entry.timestamp) >= 16
             }
+            exerciseEntries = log.exerciseEntries ?? []
             hasTrackedData = log.sleepHours != nil
                 || log.waterBottlesLogged > 0
                 || log.foodScore != nil
                 || !entries.isEmpty
+                || !exerciseEntries.isEmpty
                 || !log.checkIns.isEmpty
         }
     }

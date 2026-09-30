@@ -1,8 +1,8 @@
 # Dr Jay
 
 Dr Jay is a private, on-device accountability app for iPhone (iOS 26+) that
-tracks sleep, water, and food, and surfaces today's Health step count—with
-praise when you deliver and a sharp roast when you do not.
+tracks sleep, water, food, and optional exercise, and surfaces today's Health
+step count—with praise when you deliver and a sharp roast when you do not.
 
 ## What it tracks
 
@@ -23,6 +23,10 @@ praise when you deliver and a sharp roast when you do not.
   sweetened drinks; naturally occurring and incidental sugar is excluded.
 - **Steps:** today's cumulative count is read directly from Health for display
   and the daily report. It is never copied into Dr Jay's database or backup.
+- **Exercise:** optional free-text entries preserve the user's original words
+  and infer a broad activity category locally. Only an explicit duration such
+  as `30 minutes` or `1 hour` affects the Movement component; entries without
+  a duration are still saved and shown in History.
 
 ## Daily report
 
@@ -33,13 +37,14 @@ The overall score is deterministic and uses these base weights:
   and reduced above 9.
 - **Water: 30%** — progress toward the complete daily bottle goal, capped at
   full credit.
-- **Steps: 5%** — normalized up to a soft 8,000-step ceiling. This is not a
-  medical target and has deliberately low influence because a phone may not
-  capture every walk.
+- **Movement: 5%** — uses the higher of Health steps (normalized up to a soft
+  8,000-step ceiling) or explicitly logged exercise minutes (normalized up to
+  30 minutes). The two are never added together, preventing double-counting.
+  These are scoring references, not medical targets.
 
 Missing metrics are excluded and the available weights are proportionally
-normalized, so unavailable steps never lower the score. Missing sleep or food
-is shown explicitly and marks the report incomplete. Overall scores use
+normalized, so unavailable steps or exercise never lower the score. Missing
+sleep or food is shown explicitly and marks the report incomplete. Overall scores use
 **Good (80–100), Bad (60–79), and Ugly (0–59)**.
 
 The report can be generated on demand from Today. Its score, verdict, and
@@ -75,16 +80,16 @@ its exact byte count, file signature, SHA-256 checksum, and LiteRT engine
 initialization all succeed. Interrupted transfers retain resumable download
 data. The model can be deleted independently without affecting app history.
 
-The Today screen puts logging actions and the actionable food card first,
-followed by caffeine and sugary-item counter rings, the read-only Steps card,
-and the manual report action. History
-contains the detailed daily record, food entries, corrections, and previous
-check-ins. Current and longest streaks count consecutive days on which both
+The Today screen puts logging actions and the actionable food and exercise
+cards first, followed by caffeine and sugary-item counter rings, the read-only
+Steps card, and the manual report action. History contains the detailed daily
+record, food entries, exercise entries, corrections, and previous check-ins.
+Current and longest streaks count consecutive days on which both
 sleep and water goals were completed; food and steps do not affect streaks.
 
 **Dr Jay Insights** in History computes private 7-day and 30-day views from
 the existing log. Swift calculates coverage, goal adherence, direction,
-exposure totals, priorities, and cautiously worded patterns. Swift writes the
+exposure totals, optional exercise activity, priorities, and cautiously worded patterns. Swift writes the
 factual interpretation and next action; the selected on-device model contributes
 only a validated barb. Trends require at least seven
 logged days in both comparison windows, generated commentary is not stored,
@@ -103,9 +108,9 @@ and steps remain excluded because historical step totals are never persisted.
   the model is unavailable and can be classified manually from History.
 - App data is stored locally with SwiftData in the shared App Group container.
 - JSON export/import in **Settings → Data** preserves sleep, water, food
-  entries, scores, learned food corrections, and check-in history; streaks are
+  entries, scores, exercise logs, learned food corrections, and check-in history; streaks are
   rebuilt from those daily logs after import. The current export schema is
-  version 6; versions 1–5 remain import-compatible, and older manual food
+  version 7; versions 1–6 remain import-compatible, and older manual food
   corrections are recovered where possible. A backup leaves the app only when
   the user chooses to share the exported file. Step counts and generated daily
   report commentary are intentionally excluded from storage and JSON backups.
