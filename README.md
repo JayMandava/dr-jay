@@ -186,3 +186,10 @@ xcodebuild -project Roastie.xcodeproj -scheme Roastie \
   Export a JSON backup before reinstalling if persistent history matters.
 - Default goals are 6–9 hours of sleep and four 750 ml bottles of water; water
   settings are configurable.
+
+## License
+
+Dr Jay's original source code is available under the
+[Apache License 2.0](LICENSE). Copyright and bundled-component attribution is
+recorded in [NOTICE](NOTICE). Third-party components retain their own license
+terms, including the vendored LiteRT-LM package at `Vendor/LiteRTLM/LICENSE`.
