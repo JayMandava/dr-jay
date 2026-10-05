@@ -6,14 +6,73 @@ step count—with praise when you deliver and a sharp roast when you do not.
 
 ## Screenshots
 
-Captured on an iPhone simulator with sample entries. Light and dark appearances
-adapt to the selected theme; Brain Dump conversations disappear when closed.
+<table>
+  <tr>
+    <th>Today</th>
+    <th>Daily Report</th>
+    <th>Insights</th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/today-light.png" width="250" alt="Today: sleep and water goal rings, food estimate, and caffeine and sugary-item counters"></td>
+    <td><img src="docs/screenshots/daily-report.png" width="250" alt="Daily Report: overall verdict, scoring profile, effective weights, and Dr Jay commentary"></td>
+    <td><img src="docs/screenshots/insights.png" width="250" alt="Insights: seven-day coverage, commentary, habit adherence, and direction"></td>
+  </tr>
+  <tr>
+    <td>Log your habits and see today's progress at a glance.</td>
+    <td>Understand the day's score and hear Dr Jay's take.</td>
+    <td>Explore 7- and 30-day patterns, priorities, and progress.</td>
+  </tr>
+</table>
+
+<details>
+<summary>Explore the app</summary>
+
+### Daily logs and history
+
+History keeps daily logs, food corrections, optional exercise, and streaks.
+Today's activity cards surface Health steps and let you log exercise in your
+own words.
 
 <p>
-  <img src="docs/screenshots/today-light.png" width="250" alt="Today in light mode: sleep and water goal rings, food estimate, and caffeine and sugary-item counters">
-  <img src="docs/screenshots/today.png" width="250" alt="Today in dark mode with the same sample data">
-  <img src="docs/screenshots/brain-dump.png" width="250" alt="Brain Dump: a temporary conversation with a clearly visible message composer">
+  <img src="docs/screenshots/history.png" width="280" alt="History: consistency stats, food classifications and correction controls, and exercise entries">
+  <img src="docs/screenshots/today-activity.png" width="280" alt="Today: Health steps, optional exercise logging, report generation, Brain Dump and streaks">
 </p>
+
+### Brain Dump
+
+A private place to untangle your thoughts with playful commentary. Closing it
+erases the conversation.
+
+<p>
+  <img src="docs/screenshots/brain-dump.png" width="280" alt="Brain Dump: temporary conversation with an explicit nothing-is-saved promise">
+</p>
+
+### Widgets, Live Activities, and Dynamic Island
+
+Follow sleep and water progress from the Home Screen widget, the Dynamic
+Island, and the Dr Jay Live Activity on the Lock Screen.
+
+<p>
+  <img src="docs/screenshots/home-widget.png" width="280" alt="Home Screen: Dr Jay sleep and water widget, with progress also visible in the Dynamic Island">
+  <img src="docs/screenshots/lock-screen.png" width="280" alt="Lock Screen: Dr Jay Live Activity in the lower card, showing sleep and water status and the next check-in">
+</p>
+
+### Make it yours
+
+Choose from seven themes with light and dark appearances. Settings also
+controls Health access, check-in times, roast intensity, food feedback,
+scoring profiles, optional Gemma commentary, and JSON backup and restore.
+
+<p>
+  <img src="docs/screenshots/today.png" width="280" alt="Today in dark appearance with polished caffeine and sugary-item counters">
+  <img src="docs/screenshots/themes.png" width="280" alt="Theme selection: seven palettes and the currently selected Tropic Tonalities theme">
+</p>
+
+<p>
+  <img src="docs/screenshots/settings.png" width="280" alt="Settings: roast intensity, opt-in food feedback, daily scoring profiles and on-device model options">
+</p>
+
+</details>
 
 ## What it tracks
 
@@ -23,7 +82,7 @@ adapt to the selected theme; Brain Dump conversations disappear when closed.
 - **Water:** progress toward a configurable full-day goal. Morning, afternoon,
   and night check-ins judge whether the complete daily goal has been reached;
   they do not estimate whether the user is "on pace."
-- **Food:** plain-language meal and snack entries are analyzed on device. An
+- **Food:** plain-language meal and snack entries are analyzed on device. Each
   classification is an estimate that can be corrected. Food roasts are off
   by default and can be enabled in Settings. The Today screen rolls
   all analyzed entries into an order-independent daily score:
