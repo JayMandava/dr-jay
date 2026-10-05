@@ -42,26 +42,27 @@ struct CounterTileView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(color)
-                    .frame(width: 34, height: 34)
-                    .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                Spacer(minLength: 6)
-                Text(value)
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
                     .font(.subheadline.weight(.semibold))
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(color)
+                    .frame(width: 20)
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
+            .frame(minHeight: 34, alignment: .leading)
 
+            Text(value)
+                .font(.system(.largeTitle, design: .default, weight: .medium))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
