@@ -77,7 +77,7 @@ enum NotificationManager {
 
         await scheduleDailySummaries(
             input: dailySummaryInput,
-            intensity: settings.roastIntensity
+            settings: settings
         )
         await scheduleBackupReminder()
     }
@@ -88,7 +88,7 @@ enum NotificationManager {
     /// with fresh values. This avoids repeating yesterday's metrics forever.
     private static func scheduleDailySummaries(
         input: DailySummaryInput?,
-        intensity: RoastIntensity
+        settings: AppSettings
     ) async {
         let calendar = Calendar.current
         let now = Date()
@@ -103,7 +103,12 @@ enum NotificationManager {
             let content = UNMutableNotificationContent()
             content.title = "Dr Jay’s daily report"
             if dayOffset == 0, let input {
-                let report = DailySummaryCalculator.calculate(input, intensity: intensity)
+                let report = DailySummaryCalculator.calculate(
+                    input,
+                    intensity: settings.roastIntensity,
+                    profile: settings.dailyScoreProfile,
+                    foodRoastsEnabled: settings.foodRoastsEnabled
+                )
                 content.body = "\(report.score)/100 · \(report.detail). \(report.roast)"
             } else {
                 content.body = "Rounds are over. Open Dr Jay for today’s live report."

@@ -4,6 +4,17 @@ Dr Jay is a private, on-device accountability app for iPhone (iOS 26+) that
 tracks sleep, water, food, and optional exercise, and surfaces today's Health
 step count—with praise when you deliver and a sharp roast when you do not.
 
+## Screenshots
+
+Captured on an iPhone simulator with sample entries. Light and dark appearances
+adapt to the selected theme; Brain Dump conversations disappear when closed.
+
+<p>
+  <img src="docs/screenshots/today-light.png" width="250" alt="Today in light mode: sleep and water goal rings, food estimate, and caffeine and sugary-item counters">
+  <img src="docs/screenshots/today.png" width="250" alt="Today in dark mode with the same sample data">
+  <img src="docs/screenshots/brain-dump.png" width="250" alt="Brain Dump: a temporary conversation with a clearly visible message composer">
+</p>
+
 ## What it tracks
 
 - **Sleep:** a healthy range of 6–9 hours. Sleep can be read from HealthKit or
@@ -13,7 +24,8 @@ step count—with praise when you deliver and a sharp roast when you do not.
   and night check-ins judge whether the complete daily goal has been reached;
   they do not estimate whether the user is "on pace."
 - **Food:** plain-language meal and snack entries are analyzed on device. An
-  unhealthy entry receives an immediate roast, while the Today screen rolls
+  classification is an estimate that can be corrected. Food roasts are off
+  by default and can be enabled in Settings. The Today screen rolls
   all analyzed entries into an order-independent daily score:
   **Good (80–100), Bad (60–79), or Ugly (0–59)**. Individual classifications
   can be corrected or deleted from History. A correction becomes private
@@ -30,21 +42,31 @@ step count—with praise when you deliver and a sharp roast when you do not.
 
 ## Daily report
 
-The overall score is deterministic and uses these base weights:
+The overall score is deterministic. Choose a profile in Settings:
 
-- **Food: 35%** — today's fixed food score.
-- **Sleep: 30%** — full credit from 6–9 hours, proportionally less below 6,
+| Profile | Sleep | Water | Food | Movement |
+| --- | ---: | ---: | ---: | ---: |
+| Balanced (default) | 30% | 30% | 30% | 10% |
+| Sleep Focus | 45% | 25% | 20% | 10% |
+| Movement Focus | 25% | 20% | 20% | 35% |
+
+These are product preferences, not validated medical weightings. Each component
+is calculated as follows:
+
+- **Food** — today's fixed food score, based on on-device estimates and corrections.
+- **Sleep** — full credit from 6–9 hours, proportionally less below 6,
   and reduced above 9.
-- **Water: 30%** — progress toward the complete daily bottle goal, capped at
+- **Water** — progress toward the complete daily bottle goal, capped at
   full credit.
-- **Movement: 5%** — uses the higher of Health steps (normalized up to a soft
+- **Movement** — uses the higher of Health steps (normalized up to a soft
   8,000-step ceiling) or explicitly logged exercise minutes (normalized up to
   30 minutes). The two are never added together, preventing double-counting.
   These are scoring references, not medical targets.
 
 Missing metrics are excluded and the available weights are proportionally
 normalized, so unavailable steps or exercise never lower the score. Missing
-sleep or food is shown explicitly and marks the report incomplete. Overall scores use
+sleep or food is shown explicitly and marks the report provisional. The report
+shows configured and effective weights so this rebalancing is visible. Overall scores use
 **Good (80–100), Bad (60–79), and Ugly (0–59)**.
 
 The report can be generated on demand from Today. Its score, verdict, and
@@ -58,7 +80,10 @@ indirect clinical irony, Playful uses a direct absurd comparison, and Spicy
 uses a short accusation with no advice, hedging, or soft landing. Swift fixes
 the single verified roast target and rejects generated lines that claim a
 failure in any other metric. A local target- and intensity-aware fallback is
-used when generation is unavailable or violates that contract.
+used when generation is unavailable or violates that contract. Gentle is the
+default for new installs; existing intensity preferences are preserved. Food
+is excluded as a roast target unless explicitly enabled. Commentary must not
+discuss calories, body, or weight.
 
 At 10 p.m., a local notification delivers the latest deterministic report
 available when it was scheduled. The notification does not depend on the
@@ -80,9 +105,11 @@ its exact byte count, file signature, SHA-256 checksum, and LiteRT engine
 initialization all succeed. Interrupted transfers retain resumable download
 data. The model can be deleted independently without affecting app history.
 
-The Today screen puts logging actions and the actionable food and exercise
-cards first, followed by caffeine and sugary-item counter rings, the read-only
-Steps card, and the manual report action. History contains the detailed daily
+The Today screen puts sleep and water logging actions and the actionable
+food card first, followed by caffeine and sugary-item counters, the read-only
+Steps card, optional Exercise card, and the manual report action. Only sleep
+and water use goal rings. Buttons inside content cards use standard bordered
+styles; glass is reserved for separate controls and navigation. History contains the detailed daily
 record, food entries, exercise entries, corrections, and previous check-ins.
 Current and longest streaks count consecutive days on which both
 sleep and water goals were completed; food and steps do not affect streaks.

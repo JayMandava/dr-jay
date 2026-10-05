@@ -3,6 +3,8 @@ import Foundation
 enum RoastTarget: String, Sendable {
     case missingData
     case allGood
+    case overallBad
+    case overallUgly
     case sleepUnder
     case sleepOver
     case sleepMet
@@ -23,6 +25,8 @@ enum RoastTarget: String, Sendable {
         switch self {
         case .missingData: "The user left required tracking data incomplete."
         case .allGood: "The user performed well; roast complacency, not a nonexistent failure."
+        case .overallBad: "The verified overall result is Bad; roast only the day's execution without naming a metric."
+        case .overallUgly: "The verified overall result is Ugly; roast only the day's execution without naming a metric."
         case .sleepUnder: "The verified sleep duration was below the configured range."
         case .sleepOver: "The verified sleep duration was above the configured range."
         case .sleepMet: "The verified sleep duration was within range; roast only the rarity of competence."
@@ -46,7 +50,8 @@ enum RoastTarget: String, Sendable {
         case .sleepUnder, .sleepOver, .sleepMet, .sleepConsistency: .sleep
         case .waterIncomplete, .waterMet, .waterConsistency: .water
         case .foodBad, .foodUgly, .foodGood, .foodQuality: .food
-        case .missingData, .allGood, .trendImproving, .trendSteady, .trendSlipping, .baselineThin: nil
+        case .missingData, .allGood, .overallBad, .overallUgly,
+             .trendImproving, .trendSteady, .trendSlipping, .baselineThin: nil
         }
     }
 }
@@ -61,7 +66,7 @@ enum RoastStyleContract {
 
         Do not reinterpret the target, invent another failure, mention an unrelated metric, give advice, moralize,
         diagnose, or explain the joke. Target the user's choices only—never body, weight, identity, intelligence,
-        health conditions, or worth. No profanity, emoji, hashtags, quotation marks, eating-disorder language, or
+        health conditions, calorie intake, or worth. No profanity, emoji, hashtags, quotation marks, eating-disorder language, or
         references to real or fictional people. Return only the roast sentence.
         """
     }
@@ -112,6 +117,7 @@ enum RoastStyleContract {
         ]
         let personalAttacks: Set<String> = [
             "fat", "lazy", "stupid", "idiot", "pathetic", "worthless", "body", "weight", "ugly",
+            "calorie", "calories",
         ]
         guard preaching.isDisjoint(with: wordSet), personalAttacks.isDisjoint(with: wordSet) else { return nil }
 
@@ -144,6 +150,15 @@ enum RoastStyleContract {
         case (.allGood, .gentle): ["Competence has made a rare but documented appearance.", "The chart appears pleasantly surprised by basic consistency."]
         case (.allGood, .playful): ["You followed basic instructions and now the chart wants a commemorative plaque.", "You behaved sensibly for once and the evidence is treating it like a miracle."]
         case (.allGood, .spicy): ["You cleared medicine’s floor-level bar without tripping—historic.", "You performed basic maintenance once and immediately applied for sainthood."]
+
+        case (.overallBad, .gentle): ["The day appears to have mistaken adequacy for achievement.", "The overall performance remains politely below convincing."]
+        case (.overallBad, .playful): ["You assembled a whole day and somehow left quality control in the waiting room.", "You delivered a day so average the chart requested a second opinion."]
+        case (.overallBad, .spicy): ["You produced a full day of effort and still missed competence.", "You turned twenty-four hours into an administrative warning."
+        ]
+
+        case (.overallUgly, .gentle): ["The day’s execution appears to require discreet internal review.", "The overall result has made a compelling case for revision."]
+        case (.overallUgly, .playful): ["You ran the entire day like the instruction manual was decorative.", "You gave the day every opportunity and it filed for witness protection."]
+        case (.overallUgly, .spicy): ["You turned an entire day into evidence of operational collapse.", "You managed twenty-four hours like competence was contraband."]
 
         case (.sleepUnder, .gentle): ["The night appears to have been managed with optimistic accounting.", "Rest was apparently considered an optional administrative detail."]
         case (.sleepUnder, .playful): ["You treated bedtime like a deadline and missed it with professional confidence.", "You gave recovery a cameo and expected it to carry the entire production."]

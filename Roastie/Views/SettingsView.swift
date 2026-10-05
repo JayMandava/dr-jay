@@ -125,6 +125,32 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("Include food in roasts", isOn: $settings.foodRoastsEnabled)
+                } header: {
+                    Text("Food feedback")
+                } footer: {
+                    Text("Food classifications are on-device estimates. When this is off, food still contributes to the score but receives no roast. Dr Jay never comments on calories, body, or weight.")
+                }
+
+                Section {
+                    Picker("Profile", selection: $settings.dailyScoreProfile) {
+                        ForEach(DailyScoreProfile.allCases) { profile in
+                            Text(profile.label).tag(profile)
+                        }
+                    }
+
+                    Text(settings.dailyScoreProfile.detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    scoreWeightSummary(settings.dailyScoreProfile)
+                } header: {
+                    Text("Daily score")
+                } footer: {
+                    Text("Missing metrics are shown as unavailable and the remaining weights are rebalanced. Reports without sleep or food are marked provisional.")
+                }
+
+                Section {
                     if brainDumpModels.isReady {
                         Picker(
                             "On-device model",
@@ -250,7 +276,7 @@ struct SettingsView: View {
 
                     aboutDetail(
                         "Daily report",
-                        detail: "Food 35% · Sleep 30% · Water 30% · Movement 5%"
+                        detail: "\(settings.dailyScoreProfile.label) · \(weightSummary(settings.dailyScoreProfile))"
                     )
 
                     Text("Generate a full report anytime from Today. The score uses fixed arithmetic; only Dr Jay’s commentary is written by the on-device model.")
@@ -327,6 +353,7 @@ struct SettingsView: View {
                         SharedStore.save(settings)
                         Task {
                             await DayCoordinator.shared.applyWaterGoalChange(settings.waterGoalBottles)
+                            await DayCoordinator.shared.applyFoodFeedbackSettings()
                             await DayCoordinator.shared.refreshToday()
                         }
                         dismiss()
@@ -424,6 +451,21 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
+    }
+
+    private func scoreWeightSummary(_ profile: DailyScoreProfile) -> some View {
+        Text(weightSummary(profile))
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(.secondary)
+    }
+
+    private func weightSummary(_ profile: DailyScoreProfile) -> String {
+        let weights = profile.weights
+        return "Sleep \(percent(weights.sleep)) · Water \(percent(weights.water)) · Food \(percent(weights.food)) · Movement \(percent(weights.movement))"
+    }
+
+    private func percent(_ value: Double) -> String {
+        value.formatted(.percent.precision(.fractionLength(0)))
     }
 
     private func formattedHour(_ hour: Int) -> String {

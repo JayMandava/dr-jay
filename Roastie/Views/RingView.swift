@@ -33,7 +33,7 @@ struct RingView: View {
     }
 }
 
-struct CounterRingView: View {
+struct CounterTileView: View {
     var value: String
     var color: Color
     var icon: String
@@ -41,30 +41,31 @@ struct CounterRingView: View {
     var subtitle: String
 
     var body: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .stroke(color.opacity(0.18), lineWidth: 10)
-
-                VStack(spacing: 2) {
-                    Image(systemName: icon)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(color)
-                    Text(value)
-                        .font(.system(.title2, design: .rounded, weight: .bold))
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(color)
+                    .frame(width: 34, height: 34)
+                    .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                Spacer(minLength: 6)
+                Text(value)
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
             }
-            .frame(width: 84, height: 84)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-            Text(subtitle)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .clinicalCard()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title), \(value), \(subtitle)")
     }

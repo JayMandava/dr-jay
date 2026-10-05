@@ -20,7 +20,7 @@ struct FoodEntryRow: View {
                 HStack(spacing: 5) {
                     Text(entry.timestamp.formatted(date: .omitted, time: .shortened))
                     Text("·")
-                    Text(entry.verdict.label)
+                    Text(verdictLabel)
                         .foregroundStyle(statusColor)
                 }
                 .font(.caption)
@@ -66,6 +66,14 @@ struct FoodEntryRow: View {
         case .unhealthy: "exclamationmark.triangle.fill"
         case .unanalyzed: "questionmark.circle.fill"
         }
+    }
+
+    private var verdictLabel: String {
+        guard entry.verdict != .unanalyzed else { return entry.verdict.label }
+        if entry.wasManuallyCorrected == true || entry.usedCorrectionMemory == true {
+            return "\(entry.verdict.label) · Confirmed"
+        }
+        return "\(entry.verdict.label) estimate"
     }
 
     private var statusColor: Color {

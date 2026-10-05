@@ -103,6 +103,7 @@ enum FoodAnalyzer {
     static func analyze(
         _ food: String,
         intensity: RoastIntensity,
+        roastsEnabled: Bool,
         exactMemory: FoodCorrectionMemory? = nil,
         relatedMemories: [FoodCorrectionMemory] = []
     ) async -> FoodAssessment? {
@@ -111,6 +112,7 @@ enum FoodAnalyzer {
             if let result = await analyzeOnDevice(
                 food,
                 intensity: intensity,
+                roastsEnabled: roastsEnabled,
                 exactMemory: exactMemory,
                 relatedMemories: relatedMemories
             ) {
@@ -118,14 +120,21 @@ enum FoodAnalyzer {
             }
         }
         #endif
-        return exactMemory.map { rememberedAssessment(for: $0, intensity: intensity) }
+        return exactMemory.map {
+            rememberedAssessment(for: $0, intensity: intensity, roastsEnabled: roastsEnabled)
+        }
     }
 
     static func scoreDay(
         entries: [FoodEntry],
-        intensity: RoastIntensity
+        intensity: RoastIntensity,
+        roastsEnabled: Bool
     ) async -> DailyFoodAssessment? {
         guard let score = FoodScoreCalculator.score(entries: entries) else { return nil }
+
+        guard roastsEnabled else {
+            return DailyFoodAssessment(score: score, summary: nil)
+        }
 
         let summary: String?
         #if canImport(FoundationModels)
@@ -146,6 +155,7 @@ enum FoodAnalyzer {
     private static func analyzeOnDevice(
         _ food: String,
         intensity: RoastIntensity,
+        roastsEnabled: Bool,
         exactMemory: FoodCorrectionMemory?,
         relatedMemories: [FoodCorrectionMemory]
     ) async -> FoodAssessment? {
@@ -153,7 +163,9 @@ enum FoodAnalyzer {
             return nil
         }
 
-        let session = LanguageModelSession(instructions: entryInstructions(intensity: intensity))
+        let session = LanguageModelSession(
+            instructions: entryInstructions(intensity: intensity, roastsEnabled: roastsEnabled)
+        )
         do {
             let response = try await session.respond(
                 to: entryPrompt(
@@ -176,15 +188,17 @@ enum FoodAnalyzer {
                 ? clean(response.content.explanation)
                 : FoodMemoryStore.rememberedAssessment
             let target: RoastTarget = qualityScore < 30 ? .foodUgly : .foodBad
-            let roast = RoastStyleContract.validated(
-                clean(response.content.roast),
-                target: target,
-                intensity: intensity
-            )
+            let roast = roastsEnabled
+                ? RoastStyleContract.validated(
+                    clean(response.content.roast),
+                    target: target,
+                    intensity: intensity
+                )
+                : nil
             return FoodAssessment(
                 verdict: verdict,
                 explanation: explanation,
-                roast: verdict == .healthy
+                roast: verdict == .healthy || !roastsEnabled
                     ? nil
                     : (roast ?? RoastStyleContract.fallback(target: target, intensity: intensity)),
                 qualityScore: qualityScore,
@@ -239,11 +253,19 @@ enum FoodAnalyzer {
     }
 
     @available(iOS 26.0, *)
-    private static func entryInstructions(intensity: RoastIntensity) -> String {
-        """
+    private static func entryInstructions(
+        intensity: RoastIntensity,
+        roastsEnabled: Bool
+    ) -> String {
+        let roastInstruction = roastsEnabled
+            ? """
+            If unhealthy, write one roast targeting only the food choice and obey this construction:
+            \(RoastStyleContract.styleDirective(intensity))
+            """
+            : "Return an empty roast for both healthy and unhealthy entries."
+        return """
         You are Dr Jay: clinically precise, dry, and intolerant of bad choices.
-        For any unhealthy entry, obey this roast construction exactly:
-        \(RoastStyleContract.styleDirective(intensity))
+        \(roastInstruction)
 
         Assess one plain-language food entry using ordinary nutritional principles.
         Classify it as healthy or unhealthy. Healthy means generally balanced and nutrient-dense;
@@ -263,9 +285,9 @@ enum FoodAnalyzer {
         plain milk, sauces, staple foods, naturally occurring sugar, or incidental trace sugar.
         Sugar-free and diet items count zero. Count explicit quantities; use one when unclear.
 
-        Give one factual explanation under 100 characters. If unhealthy, write one roast targeting
-        only the food choice. Do not advise, preach, soften the ending, or mention sleep, water, or steps.
-        Never target the user's body, weight, identity, intelligence, health, worth, or eating habits.
+        Give one factual explanation under 100 characters. Do not advise, preach, soften the ending,
+        or mention sleep, water, or steps. Never mention calories or target the user's body, weight,
+        identity, intelligence, health, worth, or eating habits.
         No diagnosis, eating-disorder language, profanity, emoji, quotation marks, or hashtags.
         Never mention, quote, imitate, or claim to be any real or fictional person or character.
         If healthy, return an empty roast.
@@ -332,12 +354,13 @@ enum FoodAnalyzer {
 
     private static func rememberedAssessment(
         for memory: FoodCorrectionMemory,
-        intensity: RoastIntensity
+        intensity: RoastIntensity,
+        roastsEnabled: Bool
     ) -> FoodAssessment {
         FoodAssessment(
             verdict: memory.verdict,
             explanation: FoodMemoryStore.rememberedAssessment,
-            roast: memory.verdict == .unhealthy
+            roast: memory.verdict == .unhealthy && roastsEnabled
                 ? RoastStyleContract.fallback(target: .foodBad, intensity: intensity)
                 : nil,
             qualityScore: FoodScoreCalculator.defaultScore(for: memory.verdict) ?? 0,

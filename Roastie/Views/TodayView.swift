@@ -101,6 +101,7 @@ struct TodayView: View {
                         summary: today?.foodScoreSummary,
                         isCurrent: today?.foodScoreIsCurrent == true,
                         hasEntries: !(today?.foodEntries ?? []).isEmpty,
+                        roastsEnabled: settings.foodRoastsEnabled,
                         onLogFood: {
                             Haptics.tap()
                             showFoodSheet = true
@@ -108,14 +109,14 @@ struct TodayView: View {
                     )
 
                     HStack {
-                        CounterRingView(
+                        CounterTileView(
                             value: exposureValue(foodExposureTotals.caffeineCount),
                             color: DrJayTheme.muted,
                             icon: "cup.and.saucer.fill",
                             title: "Caffeine",
                             subtitle: exposureSubtitle
                         )
-                        CounterRingView(
+                        CounterTileView(
                             value: exposureValue(foodExposureTotals.sugaryItemCount),
                             color: DrJayTheme.roast,
                             icon: "birthday.cake.fill",
@@ -272,7 +273,12 @@ struct TodayView: View {
     }
 
     private var dailySummary: DailySummaryResult {
-        DailySummaryCalculator.calculate(dailySummaryInput, intensity: settings.roastIntensity)
+        DailySummaryCalculator.calculate(
+            dailySummaryInput,
+            intensity: settings.roastIntensity,
+            profile: settings.dailyScoreProfile,
+            foodRoastsEnabled: settings.foodRoastsEnabled
+        )
     }
 
     private var dailySummaryInput: DailySummaryInput {
@@ -295,12 +301,18 @@ struct TodayView: View {
 
         await refreshSteps()
         let input = dailySummaryInput
-        let result = DailySummaryCalculator.calculate(input, intensity: settings.roastIntensity)
+        let result = DailySummaryCalculator.calculate(
+            input,
+            intensity: settings.roastIntensity,
+            profile: settings.dailyScoreProfile,
+            foodRoastsEnabled: settings.foodRoastsEnabled
+        )
         reportResult = result
         reportCommentary = await DailyReportGenerator.generate(
             input: input,
             result: result,
             intensity: settings.roastIntensity,
+            foodRoastsEnabled: settings.foodRoastsEnabled,
             provider: commentaryModels.selectedProvider,
             previousCommentary: previousCommentary
         )
@@ -358,6 +370,8 @@ struct TodayView: View {
     private func presentFoodFeedback() {
         guard let entry = loggedFoodResult else { return }
         loggedFoodResult = nil
+
+        guard settings.foodRoastsEnabled else { return }
 
         switch entry.verdict {
         case .unhealthy:
@@ -441,7 +455,7 @@ private struct DailyReportSheet: View {
                                     .padding(.vertical, 6)
                                     .background(bandColor(result.band).opacity(0.14), in: Capsule())
                             }
-                            Text(result.isComplete ? "Complete report" : "Incomplete report")
+                            Text(result.isComplete ? "Complete report" : "Provisional report")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(result.isComplete ? DrJayTheme.primary : DrJayTheme.roast)
                             Text(result.detail)
@@ -450,13 +464,18 @@ private struct DailyReportSheet: View {
                         }
 
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Calculation")
-                                .font(.headline)
-                            WeightRow(label: "Food", weight: "35%", icon: "fork.knife", color: DrJayTheme.primary)
-                            WeightRow(label: "Sleep", weight: "30%", icon: "moon.zzz.fill", color: DrJayTheme.sleep)
-                            WeightRow(label: "Water", weight: "30%", icon: "drop.fill", color: DrJayTheme.water)
-                            WeightRow(label: "Movement", weight: "5%", icon: "figure.run", color: DrJayTheme.muted)
-                            Text("Movement uses the stronger of today’s Health steps or explicitly logged exercise minutes. Missing movement data never reduces the score.")
+                            HStack {
+                                Text("Calculation")
+                                    .font(.headline)
+                                Spacer()
+                                Text(result.profile.label)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            ForEach(result.weightBreakdown, id: \.metric) { item in
+                                WeightRow(item: item)
+                            }
+                            Text("Available metrics are rebalanced to 100%. Movement uses the stronger of Health steps or explicitly logged exercise minutes.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -523,18 +542,41 @@ private struct DailyReportSheet: View {
 }
 
 private struct WeightRow: View {
-    let label: String
-    let weight: String
-    let icon: String
-    let color: Color
+    let item: DailyScoreWeightBreakdown
 
     var body: some View {
         HStack {
-            Label(label, systemImage: icon)
+            Label(item.metric.label, systemImage: icon)
                 .foregroundStyle(color)
             Spacer()
-            Text(weight)
+            Text(weightText)
                 .font(.subheadline.bold().monospacedDigit())
+                .foregroundStyle(item.effectiveWeight == nil ? .secondary : .primary)
+        }
+    }
+
+    private var weightText: String {
+        guard let effective = item.effectiveWeight else { return "Unavailable" }
+        let configured = item.configuredWeight.formatted(.percent.precision(.fractionLength(0)))
+        let applied = effective.formatted(.percent.precision(.fractionLength(0)))
+        return configured == applied ? applied : "\(configured) → \(applied)"
+    }
+
+    private var icon: String {
+        switch item.metric {
+        case .food: "fork.knife"
+        case .sleep: "moon.zzz.fill"
+        case .water: "drop.fill"
+        case .movement: "figure.run"
+        }
+    }
+
+    private var color: Color {
+        switch item.metric {
+        case .food: DrJayTheme.primary
+        case .sleep: DrJayTheme.sleep
+        case .water: DrJayTheme.water
+        case .movement: DrJayTheme.muted
         }
     }
 }
@@ -550,6 +592,13 @@ private struct DailySummaryCard: View {
                 Spacer()
                 Text("\(result.score)/100")
                     .font(.title3.bold().monospacedDigit())
+            }
+
+            if !result.isComplete {
+                Text("PROVISIONAL")
+                    .font(.caption2.bold())
+                    .tracking(0.7)
+                    .foregroundStyle(DrJayTheme.roast)
             }
 
             Text(result.detail)
@@ -583,6 +632,7 @@ private struct FoodScoreCard: View {
     let summary: String?
     let isCurrent: Bool
     let hasEntries: Bool
+    let roastsEnabled: Bool
     let onLogFood: () -> Void
 
     var body: some View {
@@ -599,7 +649,7 @@ private struct FoodScoreCard: View {
                         .padding(.vertical, 7)
                         .padding(.horizontal, 8)
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.bordered)
                 .tint(DrJayTheme.primary)
             }
 
@@ -655,8 +705,17 @@ private struct FoodScoreCard: View {
                         }
                     }
                 }
+
+                Label(
+                    roastsEnabled
+                        ? "On-device estimate · Correct entries in History"
+                        : "On-device estimate · Food roasting is off",
+                    systemImage: "info.circle"
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
             } else {
-                Text("Log what you eat. Dr Jay will handle the diagnosis.")
+                Text("Log what you eat for a private, on-device estimate.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

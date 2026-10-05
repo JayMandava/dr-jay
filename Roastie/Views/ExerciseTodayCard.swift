@@ -16,7 +16,7 @@ struct ExerciseTodayCard: View {
                         .padding(.vertical, 7)
                         .padding(.horizontal, 8)
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.bordered)
                 .tint(DrJayTheme.primary)
             }
 

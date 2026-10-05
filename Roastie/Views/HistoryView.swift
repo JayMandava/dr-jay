@@ -11,7 +11,10 @@ struct HistoryView: View {
         List {
             Section {
                 NavigationLink {
-                    InsightsView(intensity: settings.roastIntensity)
+                    InsightsView(
+                        intensity: settings.roastIntensity,
+                        foodRoastsEnabled: settings.foodRoastsEnabled
+                    )
                 } label: {
                     Label {
                         VStack(alignment: .leading, spacing: 2) {

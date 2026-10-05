@@ -41,6 +41,48 @@ enum RoastIntensity: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+enum DailyScoreProfile: String, Codable, CaseIterable, Identifiable, Sendable {
+    case balanced
+    case sleepFocus
+    case movementFocus
+
+    var id: Self { self }
+
+    var label: String {
+        switch self {
+        case .balanced: "Balanced"
+        case .sleepFocus: "Sleep Focus"
+        case .movementFocus: "Movement Focus"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .balanced: "Sleep, water, and food share the day; movement remains meaningful without dominating it."
+        case .sleepFocus: "Sleep leads the score, with water, food, and movement providing context."
+        case .movementFocus: "Steps or explicitly logged exercise carry more weight while other habits still count."
+        }
+    }
+
+    var weights: DailyScoreWeights {
+        switch self {
+        case .balanced:
+            DailyScoreWeights(sleep: 0.30, water: 0.30, food: 0.30, movement: 0.10)
+        case .sleepFocus:
+            DailyScoreWeights(sleep: 0.45, water: 0.25, food: 0.20, movement: 0.10)
+        case .movementFocus:
+            DailyScoreWeights(sleep: 0.25, water: 0.20, food: 0.20, movement: 0.35)
+        }
+    }
+}
+
+struct DailyScoreWeights: Equatable, Sendable {
+    let sleep: Double
+    let water: Double
+    let food: Double
+    let movement: Double
+}
+
 struct CheckInRecord: Codable, Hashable, Identifiable, Sendable {
     var id: UUID = UUID()
     var window: CheckInWindow
@@ -301,14 +343,59 @@ struct TodaySnapshot: Codable, Sendable {
 }
 
 struct AppSettings: Codable, Sendable {
-    var waterGoalBottles: Int = 4
-    var bottleSizeMl: Int = 750
-    var checkInHours: [CheckInWindow: Int] = [
-        .morning: CheckInWindow.morning.defaultHour,
-        .afternoon: CheckInWindow.afternoon.defaultHour,
-        .night: CheckInWindow.night.defaultHour,
-    ]
-    var roastIntensity: RoastIntensity = .playful
-    var healthKitEnabled: Bool = false
-    var onboardingComplete: Bool = false
+    var waterGoalBottles: Int
+    var bottleSizeMl: Int
+    var checkInHours: [CheckInWindow: Int]
+    var roastIntensity: RoastIntensity
+    var foodRoastsEnabled: Bool
+    var dailyScoreProfile: DailyScoreProfile
+    var healthKitEnabled: Bool
+    var onboardingComplete: Bool
+
+    init(
+        waterGoalBottles: Int = 4,
+        bottleSizeMl: Int = 750,
+        checkInHours: [CheckInWindow: Int] = [
+            .morning: CheckInWindow.morning.defaultHour,
+            .afternoon: CheckInWindow.afternoon.defaultHour,
+            .night: CheckInWindow.night.defaultHour,
+        ],
+        roastIntensity: RoastIntensity = .gentle,
+        foodRoastsEnabled: Bool = false,
+        dailyScoreProfile: DailyScoreProfile = .balanced,
+        healthKitEnabled: Bool = false,
+        onboardingComplete: Bool = false
+    ) {
+        self.waterGoalBottles = waterGoalBottles
+        self.bottleSizeMl = bottleSizeMl
+        self.checkInHours = checkInHours
+        self.roastIntensity = roastIntensity
+        self.foodRoastsEnabled = foodRoastsEnabled
+        self.dailyScoreProfile = dailyScoreProfile
+        self.healthKitEnabled = healthKitEnabled
+        self.onboardingComplete = onboardingComplete
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case waterGoalBottles, bottleSizeMl, checkInHours, roastIntensity
+        case foodRoastsEnabled, dailyScoreProfile, healthKitEnabled, onboardingComplete
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            waterGoalBottles: try container.decodeIfPresent(Int.self, forKey: .waterGoalBottles) ?? 4,
+            bottleSizeMl: try container.decodeIfPresent(Int.self, forKey: .bottleSizeMl) ?? 750,
+            checkInHours: try container.decodeIfPresent([CheckInWindow: Int].self, forKey: .checkInHours) ?? [
+                .morning: CheckInWindow.morning.defaultHour,
+                .afternoon: CheckInWindow.afternoon.defaultHour,
+                .night: CheckInWindow.night.defaultHour,
+            ],
+            roastIntensity: try container.decodeIfPresent(RoastIntensity.self, forKey: .roastIntensity) ?? .gentle,
+            foodRoastsEnabled: try container.decodeIfPresent(Bool.self, forKey: .foodRoastsEnabled) ?? false,
+            dailyScoreProfile: try container.decodeIfPresent(DailyScoreProfile.self, forKey: .dailyScoreProfile) ?? .balanced,
+            healthKitEnabled: try container.decodeIfPresent(Bool.self, forKey: .healthKitEnabled) ?? false,
+            onboardingComplete: try container.decodeIfPresent(Bool.self, forKey: .onboardingComplete) ?? false
+        )
+    }
 }

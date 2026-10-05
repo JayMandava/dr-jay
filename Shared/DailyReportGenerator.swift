@@ -10,11 +10,16 @@ enum DailyReportGenerator {
         input: DailySummaryInput,
         result: DailySummaryResult,
         intensity: RoastIntensity,
+        foodRoastsEnabled: Bool,
         provider: BrainDumpModelProvider,
         previousCommentary: String? = nil
     ) async -> String {
         let facts = narrativeFacts(input: input, result: result)
-        let target = roastTarget(input: input, result: result)
+        let target = roastTarget(
+            input: input,
+            result: result,
+            foodRoastsEnabled: foodRoastsEnabled
+        )
         let generated: String?
 
         switch provider {
@@ -132,15 +137,22 @@ enum DailyReportGenerator {
 
     private static func roastTarget(
         input: DailySummaryInput,
-        result: DailySummaryResult
+        result: DailySummaryResult,
+        foodRoastsEnabled: Bool
     ) -> RoastTarget {
         guard result.isComplete else { return .missingData }
-        if let food = input.foodScore, food < 60 { return .foodUgly }
-        if let food = input.foodScore, food < 80 { return .foodBad }
+        if foodRoastsEnabled {
+            if let food = input.foodScore, food < 60 { return .foodUgly }
+            if let food = input.foodScore, food < 80 { return .foodBad }
+        }
         if let sleep = input.sleepHours, sleep < AppConfig.sleepGoalHours { return .sleepUnder }
         if let sleep = input.sleepHours, sleep > AppConfig.sleepGoalMaxHours { return .sleepOver }
         if input.waterBottlesLogged < max(1, input.waterGoalBottles) { return .waterIncomplete }
-        return .allGood
+        return switch result.band {
+        case .good: .allGood
+        case .bad: .overallBad
+        case .ugly: .overallUgly
+        }
     }
 
     private static func narrativeFacts(

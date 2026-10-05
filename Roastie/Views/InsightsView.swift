@@ -4,6 +4,7 @@ import SwiftUI
 struct InsightsView: View {
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
     let intensity: RoastIntensity
+    let foodRoastsEnabled: Bool
 
     @State private var period: InsightsPeriod = .sevenDays
     @State private var commentary = ""
@@ -184,6 +185,7 @@ struct InsightsView: View {
         commentary = await InsightsNarrativeGenerator.generate(
             report: report,
             intensity: intensity,
+            foodRoastsEnabled: foodRoastsEnabled,
             provider: commentaryModels.selectedProvider,
             previousCommentary: previousCommentary
         )

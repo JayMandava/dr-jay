@@ -9,11 +9,16 @@ enum InsightsNarrativeGenerator {
     static func generate(
         report: LongitudinalInsightReport,
         intensity: RoastIntensity,
+        foodRoastsEnabled: Bool,
         provider: BrainDumpModelProvider,
         previousCommentary: String? = nil
     ) async -> String {
         let facts = narrativeFacts(report)
-        let target = roastTarget(report: report, direction: facts.direction)
+        let target = roastTarget(
+            report: report,
+            direction: facts.direction,
+            foodRoastsEnabled: foodRoastsEnabled
+        )
 
         guard report.hasMinimumData else {
             return compose(
@@ -174,7 +179,8 @@ enum InsightsNarrativeGenerator {
 
     private static func roastTarget(
         report: LongitudinalInsightReport,
-        direction: InsightDirection
+        direction: InsightDirection,
+        foodRoastsEnabled: Bool
     ) -> RoastTarget {
         guard report.hasMinimumData else { return .baselineThin }
 
@@ -189,7 +195,7 @@ enum InsightsNarrativeGenerator {
         let focus = report.primaryFocus.lowercased()
         if focus.contains("sleep") { return .sleepConsistency }
         if focus.contains("water") { return .waterConsistency }
-        if focus.contains("food") { return .foodQuality }
+        if focus.contains("food"), foodRoastsEnabled { return .foodQuality }
 
         switch direction {
         case .improving: return .trendImproving

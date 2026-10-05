@@ -74,7 +74,7 @@ struct OnboardingView: View {
         case 0: "Meet Dr Jay"
         case 1: "Sleep, checked 3x a day"
         case 2: "Water, checked 3x a day"
-        case 3: "Food, judged instantly"
+        case 3: "Food, estimated privately"
         default: "Stay in the loop"
         }
     }
@@ -84,7 +84,7 @@ struct OnboardingView: View {
         case 0: "Dr Jay keeps you honest about sleep, water, food, and any exercise you choose to log — with private, on-device intelligence and a bedside manner problem."
         case 1: "Every morning, afternoon, and night, Dr Jay checks whether you landed in the healthy 6–9 hour range."
         case 2: "Log a bottle every time you finish one. Dr Jay keeps checking until you hit the full daily goal."
-        case 3: "Log what you ate in plain language. Unhealthy choices get an immediate roast, and your day earns a Good, Bad, or Ugly score."
+        case 3: "Log what you ate in plain language. Dr Jay estimates its quality on device, and you can opt into food roasts later."
         default: "Allow notifications so Dr Jay can actually check in on you."
         }
     }

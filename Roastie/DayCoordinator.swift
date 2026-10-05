@@ -64,6 +64,14 @@ final class DayCoordinator {
         persistBackup()
     }
 
+    /// Rebuilds today's food summary when the user enables or disables food
+    /// roasting so an old roast never remains visible after opting out.
+    func applyFoodFeedbackSettings() async {
+        let log = todayLog()
+        guard !(log.foodEntries ?? []).isEmpty else { return }
+        await refreshFoodScore(for: log, settings: SharedStore.loadSettings())
+    }
+
     /// Call on launch, foreground, and daily background refresh: pulls fresh
     /// sleep from HealthKit (if enabled), recomputes the snapshot, and syncs
     /// the Live Activity.
@@ -100,7 +108,7 @@ final class DayCoordinator {
 
         if !(log.foodEntries ?? []).isEmpty,
            log.foodScoreIsCurrent != true || log.foodScoreVersion != FoodScoreCalculator.version {
-            await refreshFoodScore(for: log, intensity: settings.roastIntensity)
+            await refreshFoodScore(for: log, settings: settings)
         }
 
         await pushSnapshot(log: log, settings: settings)
@@ -181,6 +189,7 @@ final class DayCoordinator {
         guard let assessment = await FoodAnalyzer.analyze(
             text,
             intensity: settings.roastIntensity,
+            roastsEnabled: settings.foodRoastsEnabled,
             exactMemory: exactMemory,
             relatedMemories: relatedMemories
         ) else {
@@ -201,7 +210,7 @@ final class DayCoordinator {
         replaceFoodEntry(entry, in: log)
         saveContext(operation: "Save food assessment")
         persistBackup()
-        await refreshFoodScore(for: log, intensity: settings.roastIntensity)
+        await refreshFoodScore(for: log, settings: settings)
         return entry
     }
 
@@ -237,7 +246,7 @@ final class DayCoordinator {
         invalidateFoodScore(for: log)
         saveContext(operation: "Correct food verdict")
         persistBackup()
-        await refreshFoodScore(for: log, intensity: SharedStore.loadSettings().roastIntensity)
+        await refreshFoodScore(for: log, settings: SharedStore.loadSettings())
     }
 
     func deleteFoodEntry(entryID: UUID, dayKey: String) async {
@@ -247,7 +256,7 @@ final class DayCoordinator {
         invalidateFoodScore(for: log)
         saveContext(operation: "Delete food entry")
         persistBackup()
-        await refreshFoodScore(for: log, intensity: SharedStore.loadSettings().roastIntensity)
+        await refreshFoodScore(for: log, settings: SharedStore.loadSettings())
     }
 
     @discardableResult
@@ -300,7 +309,7 @@ final class DayCoordinator {
         log.foodScoreVersion = nil
     }
 
-    private func refreshFoodScore(for log: DailyLog, intensity: RoastIntensity) async {
+    private func refreshFoodScore(for log: DailyLog, settings: AppSettings) async {
         let entries = log.foodEntries ?? []
         guard !entries.isEmpty else {
             log.foodScore = nil
@@ -312,7 +321,11 @@ final class DayCoordinator {
             return
         }
 
-        let assessment = await FoodAnalyzer.scoreDay(entries: entries, intensity: intensity)
+        let assessment = await FoodAnalyzer.scoreDay(
+            entries: entries,
+            intensity: settings.roastIntensity,
+            roastsEnabled: settings.foodRoastsEnabled
+        )
         log.foodScore = assessment?.score
         log.foodScoreSummary = assessment?.summary
         log.foodScoreIsCurrent = true
