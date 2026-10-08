@@ -5,6 +5,8 @@ import SwiftUI
 struct RoastieWidgetsBundle: WidgetBundle {
     var body: some Widget {
         RoastieHomeWidget()
+        AddHourSleepWidget()
+        LogBottleWidget()
         RoastieLiveActivity()
     }
 }

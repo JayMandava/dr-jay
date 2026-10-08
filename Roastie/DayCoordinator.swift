@@ -118,7 +118,7 @@ final class DayCoordinator {
 
     // MARK: - Logging
 
-    func logWaterBottle() async {
+    func logWaterBottle(useOnDeviceModel: Bool = true) async {
         let log = todayLog()
         log.waterBottlesLogged += 1
         log.waterTimestamps.append(.now)
@@ -127,7 +127,7 @@ final class DayCoordinator {
         let settings = SharedStore.loadSettings()
         let window = currentWindow(settings: settings)
         let met = GoalCalculator.waterMet(bottlesLogged: log.waterBottlesLogged, goal: log.waterGoalBottles)
-        _ = await generateAndRecord(kind: .water, window: window, met: met, log: log, settings: settings)
+        _ = await generateAndRecord(kind: .water, window: window, met: met, log: log, settings: settings, useOnDeviceModel: useOnDeviceModel)
 
         await pushSnapshot(log: log, settings: settings)
         await syncLiveActivity(log: log)
@@ -138,7 +138,7 @@ final class DayCoordinator {
     /// gated to a check-in window. Additive, like water: each call adds to
     /// today's running total and makes manual data authoritative for the rest
     /// of the day.
-    func logSleepHours(_ additionalHours: Double) async {
+    func logSleepHours(_ additionalHours: Double, useOnDeviceModel: Bool = true) async {
         let log = todayLog()
         let total = (log.sleepHours ?? 0) + additionalHours
         log.sleepHours = total
@@ -148,7 +148,7 @@ final class DayCoordinator {
         let settings = SharedStore.loadSettings()
         let window = currentWindow(settings: settings)
         let met = GoalCalculator.sleepMet(hours: total)
-        _ = await generateAndRecord(kind: .sleep, window: window, met: met, log: log, settings: settings)
+        _ = await generateAndRecord(kind: .sleep, window: window, met: met, log: log, settings: settings, useOnDeviceModel: useOnDeviceModel)
 
         await pushSnapshot(log: log, settings: settings)
         await syncLiveActivity(log: log)
@@ -392,7 +392,7 @@ final class DayCoordinator {
         persistBackup()
     }
 
-    private func generateAndRecord(kind: CheckKind, window: CheckInWindow, met: Bool, log: DailyLog, settings: AppSettings) async -> NudgeMessage {
+    private func generateAndRecord(kind: CheckKind, window: CheckInWindow, met: Bool, log: DailyLog, settings: AppSettings, useOnDeviceModel: Bool = true) async -> NudgeMessage {
         let detail = kind == .sleep
             ? GoalCalculator.sleepDetail(hours: log.sleepHours)
             : GoalCalculator.waterDetail(bottlesLogged: log.waterBottlesLogged, goal: log.waterGoalBottles)
@@ -400,11 +400,11 @@ final class DayCoordinator {
         let goal = kind == .sleep ? AppConfig.sleepGoalHours : Double(log.waterGoalBottles)
 
         let context = NudgeContext(kind: kind, window: window, met: met, detail: detail, value: value, goal: goal, streak: streak(), intensity: settings.roastIntensity)
-        let message = await RoastEngine.generate(context)
+        let message = await RoastEngine.generate(context, useOnDeviceModel: useOnDeviceModel)
 
         log.checkIns.append(CheckInRecord(
             window: window, kind: kind, timestamp: .now, met: met,
-            message: message.text, wasGeneratedByModel: true
+            message: message.text, wasGeneratedByModel: useOnDeviceModel
         ))
         saveContext(operation: "Save check-in message")
         return message

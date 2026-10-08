@@ -218,6 +218,12 @@ and steps remain excluded because historical step totals are never persisted.
 - **ActivityKit** for sleep and water progress on the Dynamic Island and Lock
   Screen.
 - **WidgetKit** for sleep and water Home Screen and Lock Screen widgets.
+- **Quick-log widgets:** **Add 1h Sleep** and **Log 1 Bottle** log directly
+  without opening the app UI. Add either from the Dr Jay widget gallery on
+  the Home Screen or Lock Screen. Sleep adds one hour and makes manual sleep
+  authoritative for today, just like an in-app entry. Each tap refreshes
+  progress, check-in history, the backup, and existing Live Activities;
+  quick-log commentary uses the local intensity-aware fallback bank.
 - **App Intents** for logging bottles or sleep and checking current status
   through Siri.
 - Configurable morning, afternoon, and night local notifications, plus an

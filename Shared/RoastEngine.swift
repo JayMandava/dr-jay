@@ -25,11 +25,11 @@ struct NudgeMessage: Sendable, Codable {
 /// Swift freezes the factual check-in detail. The model writes only a roast
 /// for the matching verified target, preventing it from changing the result.
 enum RoastEngine {
-    static func generate(_ context: NudgeContext) async -> NudgeMessage {
+    static func generate(_ context: NudgeContext, useOnDeviceModel: Bool = true) async -> NudgeMessage {
         let target = roastTarget(context)
 
         #if canImport(FoundationModels)
-        if #available(iOS 26.0, *),
+        if #available(iOS 26.0, *), useOnDeviceModel,
            let generated = await generateOnDevice(target: target, context: context),
            let roast = RoastStyleContract.validated(
                generated,
