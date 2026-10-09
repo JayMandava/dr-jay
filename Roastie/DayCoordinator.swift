@@ -18,11 +18,14 @@ final class DayCoordinator {
         self.context = ModelContext(PersistenceController.modelContainer)
     }
 
-    private func saveContext(operation: String) {
+    @discardableResult
+    private func saveContext(operation: String) -> Bool {
         do {
             try context.save()
+            return true
         } catch {
             AppLogger.report(error, operation: operation, logger: AppLogger.persistence)
+            return false
         }
     }
 
@@ -118,11 +121,18 @@ final class DayCoordinator {
 
     // MARK: - Logging
 
-    func logWaterBottle(useOnDeviceModel: Bool = true) async {
+    @discardableResult
+    func logWaterBottle(useOnDeviceModel: Bool = true) async -> Bool {
         let log = todayLog()
+        let previousCount = log.waterBottlesLogged
+        let previousTimestamps = log.waterTimestamps
         log.waterBottlesLogged += 1
         log.waterTimestamps.append(.now)
-        saveContext(operation: "Log water bottle")
+        guard saveContext(operation: "Log water bottle") else {
+            log.waterBottlesLogged = previousCount
+            log.waterTimestamps = previousTimestamps
+            return false
+        }
 
         let settings = SharedStore.loadSettings()
         let window = currentWindow(settings: settings)
@@ -132,18 +142,26 @@ final class DayCoordinator {
         await pushSnapshot(log: log, settings: settings)
         await syncLiveActivity(log: log)
         persistBackup()
+        return true
     }
 
     /// Free-form manual sleep entry — logged any time, same as water, not
     /// gated to a check-in window. Additive, like water: each call adds to
     /// today's running total and makes manual data authoritative for the rest
     /// of the day.
-    func logSleepHours(_ additionalHours: Double, useOnDeviceModel: Bool = true) async {
+    @discardableResult
+    func logSleepHours(_ additionalHours: Double, useOnDeviceModel: Bool = true) async -> Bool {
         let log = todayLog()
+        let previousHours = log.sleepHours
+        let previousSource = log.sleepSource
         let total = (log.sleepHours ?? 0) + additionalHours
         log.sleepHours = total
         log.sleepSource = "manual"
-        saveContext(operation: "Log manual sleep")
+        guard saveContext(operation: "Log manual sleep") else {
+            log.sleepHours = previousHours
+            log.sleepSource = previousSource
+            return false
+        }
 
         let settings = SharedStore.loadSettings()
         let window = currentWindow(settings: settings)
@@ -153,6 +171,7 @@ final class DayCoordinator {
         await pushSnapshot(log: log, settings: settings)
         await syncLiveActivity(log: log)
         persistBackup()
+        return true
     }
 
     /// Saves first, then asks the on-device model to assess the entry. If the

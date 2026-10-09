@@ -224,6 +224,9 @@ and steps remain excluded because historical step totals are never persisted.
   authoritative for today, just like an in-app entry. Each tap refreshes
   progress, check-in history, the backup, and existing Live Activities;
   quick-log commentary uses the local intensity-aware fallback bank.
+  Successful widget logs show a checkmark and last-added time, with animated
+  totals. Confirmation appears only after the daily log saves and is scoped
+  to today; widget feedback timestamps are not included in JSON backups.
 - **App Intents** for logging bottles or sleep and checking current status
   through Siri.
 - Configurable morning, afternoon, and night local notifications, plus an

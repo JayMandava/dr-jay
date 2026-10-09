@@ -7,7 +7,7 @@ struct AddHourSleepWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: SnapshotProvider()) { entry in
-            QuickLogWidgetView(snapshot: entry.snapshot, action: .sleep, intent: AddHourSleepWidgetIntent())
+            QuickLogWidgetView(snapshot: entry.snapshot, date: entry.date, action: .sleep, intent: AddHourSleepWidgetIntent())
                 .containerBackground(DrJayTheme.surface, for: .widget)
         }
         .configurationDisplayName("Add 1h Sleep")
@@ -21,7 +21,7 @@ struct LogBottleWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: SnapshotProvider()) { entry in
-            QuickLogWidgetView(snapshot: entry.snapshot, action: .water, intent: LogBottleWidgetIntent())
+            QuickLogWidgetView(snapshot: entry.snapshot, date: entry.date, action: .water, intent: LogBottleWidgetIntent())
                 .containerBackground(DrJayTheme.surface, for: .widget)
         }
         .configurationDisplayName("Log 1 Bottle")
@@ -37,6 +37,7 @@ private enum QuickLogAction {
     var icon: String { self == .sleep ? "moon.zzz.fill" : "drop.fill" }
     var color: Color { self == .sleep ? DrJayTheme.sleep : DrJayTheme.water }
     var increment: String { self == .sleep ? "+1h" : "+1" }
+    var kind: CheckKind { self == .sleep ? .sleep : .water }
 
     func progress(snapshot: TodaySnapshot) -> String {
         let today = snapshot.dayKey == Date().dayKey ? snapshot : nil
@@ -53,15 +54,35 @@ private enum QuickLogAction {
 private struct QuickLogWidgetView<Intent: AppIntent>: View {
     @Environment(\.widgetFamily) private var family
     let snapshot: TodaySnapshot
+    let date: Date
     let action: QuickLogAction
     let intent: Intent
+
+    private var lastSaved: Date? {
+        guard let saved = QuickLogReceipt.date(for: action.kind),
+              saved <= date, saved.dayKey == date.dayKey,
+              snapshot.dayKey == date.dayKey else { return nil }
+        return saved
+    }
+
+    private var confirmation: String? {
+        lastSaved.map {
+            let time = $0.formatted(date: .omitted, time: .shortened)
+            return action == .sleep ? "Last +1h · \(time)" : "Last bottle · \(time)"
+        }
+    }
+
+    private var feedbackIcon: String {
+        lastSaved == nil ? action.icon : "checkmark.circle.fill"
+    }
 
     var body: some View {
         Button(intent: intent) {
             switch family {
             case .accessoryCircular:
                 VStack(spacing: 2) {
-                    Image(systemName: action.icon)
+                    Image(systemName: feedbackIcon)
+                        .contentTransition(.symbolEffect(.replace))
                     Text(action.increment)
                         .font(.caption2.weight(.semibold))
                 }
@@ -72,14 +93,21 @@ private struct QuickLogWidgetView<Intent: AppIntent>: View {
                         .font(.headline)
                     Text(action.progress(snapshot: snapshot))
                         .font(.caption)
+                        .contentTransition(.numericText())
+                        .invalidatableContent()
+                    if let confirmation {
+                        Label(confirmation, systemImage: "checkmark")
+                            .font(.caption2)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             default:
-                VStack(spacing: 10) {
-                    Image(systemName: action.icon)
-                        .font(.system(size: 28, weight: .semibold))
+                VStack(spacing: 6) {
+                    Image(systemName: feedbackIcon)
+                        .contentTransition(.symbolEffect(.replace))
+                        .font(.system(size: 24, weight: .semibold))
                         .foregroundStyle(action.color)
-                        .frame(width: 52, height: 52)
+                        .frame(width: 44, height: 44)
                         .background(action.color.opacity(0.14), in: Circle())
                     Text(action.title)
                         .font(.headline)
@@ -87,6 +115,13 @@ private struct QuickLogWidgetView<Intent: AppIntent>: View {
                     Text(action.progress(snapshot: snapshot))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
+                        .invalidatableContent()
+                    if let confirmation {
+                        Text(confirmation)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -94,6 +129,6 @@ private struct QuickLogWidgetView<Intent: AppIntent>: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(action.title)
-        .accessibilityHint(action.progress(snapshot: snapshot))
+        .accessibilityHint([action.progress(snapshot: snapshot), confirmation].compactMap { $0 }.joined(separator: ". "))
     }
 }
