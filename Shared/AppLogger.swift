@@ -14,6 +14,6 @@ enum AppLogger {
     static let sharedStore = Logger(subsystem: subsystem, category: "shared-store")
 
     static func report(_ error: Error, operation: String, logger: Logger) {
-        logger.error("\(operation, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+        logger.error("\(operation, privacy: .public) failed: \(String(describing: error), privacy: .private)")
     }
 }

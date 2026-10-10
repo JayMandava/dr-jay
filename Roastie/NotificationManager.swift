@@ -133,8 +133,8 @@ enum NotificationManager {
         }
     }
 
-    /// Fires once, a day before a free-provisioning install's 7-day trust
-    /// window expires, nudging you to export a backup before it does.
+    /// Fires once, a day before an actual development signing profile expires.
+    /// Distribution builds and missing profiles do not schedule this reminder.
     /// Harmless to call repeatedly — same identifier, same target date each
     /// time, and a past date is simply skipped.
     private static func scheduleBackupReminder() async {

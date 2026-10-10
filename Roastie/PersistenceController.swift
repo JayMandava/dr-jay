@@ -12,6 +12,13 @@ enum PersistenceController {
             .appending(path: "Roastie.sqlite")
         let configuration = ModelConfiguration(schema: schema, url: storeURL)
         do {
+            // The App Group holds health records, WAL sidecars and shared
+            // snapshots. Keep the entire private container out of cloud backup.
+            var privateDirectory = storeURL.deletingLastPathComponent()
+            try FileManager.default.createDirectory(at: privateDirectory, withIntermediateDirectories: true)
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try privateDirectory.setResourceValues(values)
             return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             fatalError("Failed to create SwiftData container: \(error)")

@@ -53,11 +53,6 @@ enum AppConfig {
     /// Above this, you're oversleeping — that gets roasted too, same as undersleeping.
     static let sleepGoalMaxHours: Double = 9.0
 
-    /// A free (non-paid) developer install stops trusting its signature 7
-    /// days after install — this is that window, used to time the backup
-    /// reminder a day before it expires.
-    static let freeProvisioningWindowDays = 7
-
     /// Records "now" as the install date on first call only; every later
     /// call is a no-op and returns the original date. Call this on every
     /// launch — it's cheap and idempotent.
@@ -76,11 +71,15 @@ enum AppConfig {
     }
 
     static var provisioningExpiryDate: Date? {
-        if let embeddedExpiry = embeddedProvisioningExpiryDate {
-            return embeddedExpiry
-        }
-        guard let installDate else { return nil }
-        return Calendar.current.date(byAdding: .day, value: freeProvisioningWindowDays, to: installDate)
+        embeddedProvisioningExpiryDate
+    }
+
+    /// Only development-signed installs get a signing reminder. A missing
+    /// profile (App Store/TestFlight) is never replaced with a guessed date.
+    static func developmentExpiry(in profile: [String: Any]) -> Date? {
+        guard let entitlements = profile["Entitlements"] as? [String: Any],
+              entitlements["get-task-allow"] as? Bool == true else { return nil }
+        return profile["ExpirationDate"] as? Date
     }
 
     /// Reads the real expiration date from the provisioning profile embedded
@@ -112,7 +111,7 @@ enum AppConfig {
             return nil
         }
 
-        return profile["ExpirationDate"] as? Date
+        return developmentExpiry(in: profile)
     }
 }
 

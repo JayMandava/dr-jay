@@ -3,3 +3,17 @@ Copyright 2026 Jeyanth Mandava
 
 This product includes LiteRT-LM software distributed under the Apache
 License, Version 2.0. Its license is preserved at Vendor/LiteRTLM/LICENSE.
+
+The optional Gemma 4 E2B model is provided by Google, in LiteRT-LM format
+by litert-community, under the Apache License, Version 2.0. The model is
+downloaded only at the user's request and is not included in this app binary.
+Model card: https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm
+License: https://ai.google.dev/gemma/apache_2
+
+The app bundles this notice and the Apache License. LiteRT-LM's third-party
+license notices remain in CLiteRTLM.framework/third_party_licenses.bundle
+and are available in Settings > About > Licenses and Notices.
+
+Dr Jay adds a privacy manifest to the embedded CLiteRTLM.framework for its
+local model/cache file access and elapsed-time measurements. The upstream
+binary is unchanged; the framework is re-signed after adding that resource.

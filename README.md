@@ -256,10 +256,17 @@ and steps remain excluded because historical step totals are never persisted.
 
 ## Validation
 
+Release configuration, privacy resources, and the enrollment/upload checklist
+are documented in [TestFlight preparation](docs/TESTFLIGHT.md). The bundled
+[privacy policy](PRIVACY.md) is available offline in Settings → About, alongside
+component licenses. Health records and the automatic JSON backup are excluded
+from system cloud backups; exported copies remain under the user's control.
+
 The project includes unit coverage for goal calculation, streaks, check-in
 window selection, snapshot migration, backup import, food scoring and exposure
 counter boundaries, learned food-memory matching, daily-report weighting, missing-step
 handling, Brain Dump safety routing, and Good/Bad/Ugly report boundaries.
+Release checks also cover development-profile expiry and bundled policy resources.
 Compile the app and test bundle
 without executing tests with:
 
@@ -279,6 +286,8 @@ xcodebuild -project Roastie.xcodeproj -scheme Roastie \
   delivery is also opportunistic rather than a real-time pedometer feed.
 - A free Apple Developer signing profile normally expires after seven days.
   Export a JSON backup before reinstalling if persistent history matters.
+  Signing reminders appear only for an actual development profile, not
+  TestFlight or App Store installations.
 - Default goals are 6–9 hours of sleep and four 750 ml bottles of water; water
   settings are configurable.
 

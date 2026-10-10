@@ -250,7 +250,9 @@ struct SettingsView: View {
                 } header: {
                     Text("Data")
                 } footer: {
-                    Text("A free (non-paid) developer install expires after 7 days. Export a backup before that happens, and import it after reinstalling to keep your history, exercise logs, and learned food corrections.")
+                    Text(AppConfig.provisioningExpiryDate == nil
+                         ? "Export a JSON backup to keep a separate copy of your history, exercise logs, and learned food corrections. Keep exported files somewhere private."
+                         : "Development-signed installs expire. Export a backup before reinstalling to keep your history, exercise logs, and learned food corrections.")
                 }
 
                 Section("About") {
@@ -284,6 +286,12 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
 
                     LabeledContent("Version", value: appVersion)
+                    NavigationLink("Privacy Policy") {
+                        LegalDocumentView(title: "Privacy Policy", resource: "PRIVACY", fileExtension: "md")
+                    }
+                    NavigationLink("Licenses and Notices") {
+                        LicensesView()
+                    }
                 }
 
                 Section {

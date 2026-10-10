@@ -93,6 +93,12 @@ enum BackupManager {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(payload)
         try data.write(to: url, options: .atomic)
+        // Export is an explicit user action; automatic app backups must not
+        // silently send this health history to iCloud.
+        var backupURL = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try backupURL.setResourceValues(values)
     }
 
     static func read(from url: URL) throws -> BackupPayload {
