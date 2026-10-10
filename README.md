@@ -259,8 +259,10 @@ and steps remain excluded because historical step totals are never persisted.
 Release configuration, privacy resources, and the enrollment/upload checklist
 are documented in [TestFlight preparation](docs/TESTFLIGHT.md). The bundled
 [privacy policy](PRIVACY.md) is available offline in Settings → About, alongside
-component licenses. Health records and the automatic JSON backup are excluded
-from system cloud backups; exported copies remain under the user's control.
+component licenses. Database files and the automatic JSON backup are marked
+for backup exclusion without modifying the protected App Group root. Shared
+preferences require a separate backup audit before distribution; exported
+copies remain under the user's control.
 
 The project includes unit coverage for goal calculation, streaks, check-in
 window selection, snapshot migration, backup import, food scoring and exposure

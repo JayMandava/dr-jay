@@ -8,7 +8,7 @@ The app and widgets share marketing version and build number in `project.yml`. I
 
 Privacy manifests cover App Group/private defaults and the model-download free-space check. The pinned CLiteRTLM dynamic framework uses file metadata for model-cache identifiers and elapsed-time APIs. Its separate manifest is copied into the embedded framework and the framework is re-signed before final app signing. Do not move those declarations only into the app manifest. Review the SDK declarations whenever upgrading LiteRT-LM.
 
-Dr Jay excludes its private App Group health storage and automatic JSON backup from system cloud backups. Explicit exports remain user-controlled. Development-signing expiry UI and backup reminders depend on an actual development profile; missing or distribution profiles do not produce a guessed expiry.
+Dr Jay marks its app-owned SQLite database, WAL/SHM sidecars, and automatic JSON backup for backup exclusion. It must not set metadata on the protected App Group root: physical iOS rejects that operation. Database metadata errors are logged separately and do not prevent store opening. Shared preferences and widget snapshots still need a separate backup audit before distribution. Explicit exports remain user-controlled. Development-signing expiry UI and backup reminders depend on an actual development profile; missing or distribution profiles do not produce a guessed expiry.
 
 Settings → About contains the bundled privacy policy and license notices. The public policy is [PRIVACY.md](../PRIVACY.md). Confirm the direct privacy-contact email before external beta distribution. The optional Gemma 4 E2B artifact is Apache 2.0; older Gemma terms are not its license. The upstream LiteRT binary's dependency notices remain bundled and readable.
 
@@ -66,6 +66,7 @@ required. These results do not establish iOS 26 device behavior or upload
 eligibility for the local beta SDK.
 
 - Direct private contact email and public policy confirmed.
+- Shared preferences and widget-snapshot backup handling audited for HealthKit data before distribution.
 - Hosted unit suite passed on the final sources.
 - Signed Release smoke checks completed on a physical phone.
 - Paid-team archive validates, including nested framework signing and privacy report.

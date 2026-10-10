@@ -26,7 +26,7 @@ Opening the public policy, source repository, or other external links connects t
 
 ## Backups and deletion
 
-Dr Jay maintains a local JSON backup of logged history and learned food corrections. It is not encrypted by the app. The private health-data container and the automatic JSON backup are excluded from system cloud backups. The app does not provide cloud sync.
+Dr Jay maintains a local JSON backup of logged history and learned food corrections. It is not encrypted by the app. Dr Jay marks its database files and automatic JSON backup for exclusion from system backups. If iOS rejects a database file's metadata update, Dr Jay logs the failure without blocking access to your entries. The app does not provide cloud sync. Shared preferences, including the current widget snapshot and learned food corrections, may be included in system backups according to your device settings; this policy does not promise that every copy of app data is excluded.
 
 A backup leaves the app only when you explicitly export or share it. If you save that export to iCloud Drive or another provider, that provider handles your copy. Protect exported files because they contain personal information. Brain Dump conversations, historical step totals, model files, and generated report or insights commentary are not included in the JSON backup.
 

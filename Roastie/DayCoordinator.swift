@@ -22,6 +22,7 @@ final class DayCoordinator {
     private func saveContext(operation: String) -> Bool {
         do {
             try context.save()
+            PersistenceController.excludeStoreFilesFromBackup()
             return true
         } catch {
             AppLogger.report(error, operation: operation, logger: AppLogger.persistence)
