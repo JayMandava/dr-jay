@@ -230,9 +230,12 @@ and steps remain excluded because historical step totals are never persisted.
 - **App Intents** for logging bottles or sleep and checking current status
   through Siri.
 - Configurable morning, afternoon, and night local notifications, plus an
-  exact-time 10 p.m. report. Today is personalized from the latest available
-  values; a rolling week of generic fallbacks avoids replaying stale metrics
-  if the app receives no refresh.
+  exact-time 10 p.m. report. Today's sleep/water check-ins pair the latest
+  goal status with an intensity-matched punchline from the local roast bank:
+  sarcastic praise when met, a goal-specific roast otherwise. Logging and
+  refreshes rebuild the remaining check-ins without waiting for a model.
+  Missing sleep data stays factual, and a rolling week of neutral reminders
+  avoids replaying today's verdict on future days if the app receives no refresh.
 
 ## Setup
 
@@ -281,8 +284,9 @@ xcodebuild -project Roastie.xcodeproj -scheme Roastie \
 
 - iOS does not run app code when a local notification is delivered. Its text
   therefore uses the latest values from the most recent foreground or Health
-  background refresh. Future generic 10 p.m. fallbacks never repeat stale
-  metrics as though they belonged to a new day.
+  background refresh. Future check-ins and 10 p.m. fallbacks never repeat stale
+  metrics as though they belonged to a new day. The seven-day schedule is
+  replenished whenever the app refreshes.
 - Background processing is opportunistic and acts as a day-rollover backstop;
   foreground refresh remains the primary update path. Health step observer
   delivery is also opportunistic rather than a real-time pedometer feed.

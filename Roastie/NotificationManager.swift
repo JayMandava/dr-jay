@@ -1,12 +1,16 @@
 import Foundation
 import UserNotifications
 
-/// Schedules the 6 repeating daily check-ins and a rolling week of exact-time
+/// Schedules a rolling week of six daily check-ins and exact-time
 /// 10 p.m. summaries. Local notifications cannot be modified by a notification
 /// service extension at delivery time, so each request is personalized from
 /// the latest shared snapshot when it is scheduled. `DayCoordinator` calls
 /// this again whenever that snapshot changes.
 enum NotificationManager {
+
+    @MainActor private static var isRescheduling = false
+    @MainActor private static var pendingSettings: AppSettings?
+    @MainActor private static var pendingSummary: DailySummaryInput?
 
     static func registerCategories() {
         let sleepYes = UNNotificationAction(identifier: AppConfig.NotificationAction.sleepYes, title: "Yes, within range", options: [])
@@ -44,35 +48,56 @@ enum NotificationManager {
     /// any time settings change — `removeAllPendingNotificationRequests`
     /// wipes everything first, so every scheduled thing has to be re-added
     /// here or it silently stops firing.
+    @MainActor
     static func rescheduleAll(
         settings: AppSettings,
         dailySummaryInput: DailySummaryInput? = nil
     ) async {
+        // Logging/Health updates can overlap at suspension points. Finish one
+        // rebuild at a time, then apply the newest settings and snapshot last.
+        pendingSettings = settings
+        pendingSummary = dailySummaryInput
+        guard !isRescheduling else { return }
+        isRescheduling = true
+        defer { isRescheduling = false }
+        while let nextSettings = pendingSettings {
+            let nextSummary = pendingSummary
+            pendingSettings = nil
+            pendingSummary = nil
+            await rebuild(settings: nextSettings, dailySummaryInput: nextSummary)
+        }
+    }
+
+    private static func rebuild(settings: AppSettings, dailySummaryInput: DailySummaryInput?) async {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
-
+        let now = Date()
+        let calendar = Calendar.current
         let snapshot = SharedStore.loadSnapshot().flatMap {
-            $0.dayKey == Date().dayKey ? $0 : nil
+            $0.dayKey == now.dayKey ? $0 : nil
         }
 
-        for window in CheckInWindow.allCases {
-            let hour = settings.checkInHours[window] ?? window.defaultHour
-            await schedule(
-                kind: .sleep,
-                window: window,
-                hour: hour,
-                category: AppConfig.NotificationCategory.sleepCheck,
-                settings: settings,
-                snapshot: snapshot
-            )
-            await schedule(
-                kind: .water,
-                window: window,
-                hour: hour,
-                category: AppConfig.NotificationCategory.waterCheck,
-                settings: settings,
-                snapshot: snapshot
-            )
+        // 42 check-ins + 7 reports + 1 expiry reminder stay below iOS's
+        // 64-request limit. Never repeat today's verdict on a future day.
+        for dayOffset in 0..<7 {
+            guard let day = calendar.date(byAdding: .day, value: dayOffset, to: now) else { continue }
+            for window in CheckInWindow.allCases {
+                var components = calendar.dateComponents([.year, .month, .day], from: day)
+                components.hour = settings.checkInHours[window] ?? window.defaultHour
+                components.minute = 0
+                guard let fireDate = calendar.date(from: components), fireDate > now else { continue }
+                for kind in [CheckKind.sleep, .water] {
+                    await schedule(
+                        kind: kind,
+                        window: window,
+                        components: components,
+                        dayKey: day.dayKey,
+                        category: kind == .sleep ? AppConfig.NotificationCategory.sleepCheck : AppConfig.NotificationCategory.waterCheck,
+                        settings: settings,
+                        snapshot: dayOffset == 0 ? snapshot : nil
+                    )
+                }
+            }
         }
 
         await scheduleDailySummaries(
@@ -165,27 +190,26 @@ enum NotificationManager {
     private static func schedule(
         kind: CheckKind,
         window: CheckInWindow,
-        hour: Int,
+        components: DateComponents,
+        dayKey: String,
         category: String,
         settings: AppSettings,
         snapshot: TodaySnapshot?
     ) async {
         let content = UNMutableNotificationContent()
         content.title = "\(window.label) check — \(kind == .sleep ? "Sleep" : "Water")"
-        content.body = statusBody(kind: kind, settings: settings, snapshot: snapshot)
+        content.body = statusBody(kind: kind, window: window, settings: settings, snapshot: snapshot)
         content.categoryIdentifier = category
         content.userInfo = [
             AppConfig.UserInfoKey.kind: kind.rawValue,
             AppConfig.UserInfoKey.window: window.rawValue,
         ]
         content.interruptionLevel = .active
+        content.sound = .default
 
-        var dateComponents = DateComponents()
-        dateComponents.hour = hour
-        dateComponents.minute = 0
-        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
 
-        let identifier = "\(kind.rawValue).\(window.rawValue)"
+        let identifier = "\(kind.rawValue).\(window.rawValue).\(dayKey)"
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         do {
             try await UNUserNotificationCenter.current().add(request)
@@ -198,21 +222,37 @@ enum NotificationManager {
         }
     }
 
-    private static func statusBody(kind: CheckKind, settings: AppSettings, snapshot: TodaySnapshot?) -> String {
+    static func statusBody(kind: CheckKind, window: CheckInWindow, settings: AppSettings, snapshot: TodaySnapshot?) -> String {
+        guard let snapshot else {
+            return kind == .sleep
+                ? "Time for your sleep check. Open Dr Jay for today's status."
+                : "Time for your water check. Open Dr Jay for today's status."
+        }
+        let detail: String
+        let met: Bool
+        let target: RoastTarget
         switch kind {
         case .sleep:
-            guard let hours = snapshot?.sleepHours else {
-                return "No sleep data yet — Pending."
+            guard let hours = snapshot.sleepHours else {
+                return "No sleep logged yet. Open Dr Jay to check in."
             }
-            let detail = GoalCalculator.sleepDetail(hours: hours)
-            return "\(capitalized(detail)) — \(GoalCalculator.sleepMet(hours: hours) ? "Cleared." : "Flagged.")"
-
+            detail = GoalCalculator.sleepDetail(hours: hours)
+            met = GoalCalculator.sleepMet(hours: hours)
+            target = hours > AppConfig.sleepGoalMaxHours ? .sleepOver : (met ? .sleepMet : .sleepUnder)
         case .water:
-            let bottlesLogged = snapshot?.waterBottlesLogged ?? 0
-            let goal = snapshot?.waterGoalBottles ?? settings.waterGoalBottles
-            let detail = GoalCalculator.waterDetail(bottlesLogged: bottlesLogged, goal: goal)
-            return "\(capitalized(detail)) — \(GoalCalculator.waterMet(bottlesLogged: bottlesLogged, goal: goal) ? "Cleared." : "Flagged.")"
+            detail = GoalCalculator.waterDetail(bottlesLogged: snapshot.waterBottlesLogged, goal: snapshot.waterGoalBottles)
+            met = GoalCalculator.waterMet(bottlesLogged: snapshot.waterBottlesLogged, goal: snapshot.waterGoalBottles)
+            target = met ? .waterMet : .waterIncomplete
         }
+        // Alternate the approved punchlines across windows without model
+        // latency or reusing a stale check-in's verdict/message.
+        let first = RoastStyleContract.fallback(target: target, intensity: settings.roastIntensity)
+        let roast = RoastStyleContract.fallback(
+            target: target,
+            intensity: settings.roastIntensity,
+            excluding: window == .afternoon ? first : nil
+        )
+        return "\(capitalized(detail)) — \(met ? "Cleared." : "Flagged.") \(roast)"
     }
 
     private static func capitalized(_ value: String) -> String {
