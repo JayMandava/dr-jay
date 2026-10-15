@@ -15,6 +15,15 @@ struct InsightsView: View {
         LongitudinalInsightsCalculator.calculate(logs: logs, period: period)
     }
 
+    private var presenceEntries: [PresenceEntry] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let start = calendar.date(byAdding: .day, value: -(period.rawValue - 1), to: today) ?? today
+        let end = calendar.date(byAdding: .day, value: 1, to: today) ?? .now
+        return logs.flatMap { $0.presenceEntries ?? [] }
+            .filter { $0.timestamp >= start && $0.timestamp < end && $0.timestamp <= .now }
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
@@ -33,6 +42,17 @@ struct InsightsView: View {
                 }
 
                 exposureCard
+
+                if !presenceEntries.isEmpty {
+                    PresenceCard(
+                        summary: PresenceSummary(entries: presenceEntries),
+                        title: "Presence · \(period.label)"
+                    )
+                    Text("Logged on \(Set(presenceEntries.map { $0.timestamp.dayKey }).count) days. Descriptive only—not a relationship assessment or a trend in unlogged time.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
                 if let association = report.association {
                     Label(association, systemImage: "point.3.connected.trianglepath.dotted")

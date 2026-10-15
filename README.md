@@ -237,6 +237,21 @@ and steps remain excluded because historical step totals are never persisted.
   Missing sleep data stays factual, and a rolling week of neutral reminders
   avoids replaying today's verdict on future days if the app receives no refresh.
 
+## Presence
+
+Presence is an optional record of intentional unplugged solo time and attentive
+time with people who matter to you. Log 15, 30, 60, or a custom number of minutes,
+choose today or an earlier day, and optionally add a note (up to 500 characters).
+A meaningful phone call counts as time together. Log shared time once rather
+than in both categories; the combined daily total cannot exceed 1,440 minutes.
+
+Entries appear in daily history, the manual daily report, and the selected
+7/30-day Insights window. Commentary always uses Gentle, independently of the
+global roast setting, and targets digital habits—not relationships or missing
+logs. Presence does not affect scores, streaks, trend baselines, or notifications.
+Entries and notes persist locally and are included in version-8 JSON backups;
+older backups restore with no Presence entries. Brain Dump remains ephemeral.
+
 ## Setup
 
 1. Install Xcode with the iOS 26+ SDK and install XcodeGen if needed:

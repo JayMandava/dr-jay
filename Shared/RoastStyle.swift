@@ -1,6 +1,8 @@
 import Foundation
 
 enum RoastTarget: String, Sendable {
+    case presenceSolo
+    case presenceTogether
     case missingData
     case allGood
     case overallBad
@@ -23,6 +25,8 @@ enum RoastTarget: String, Sendable {
 
     fileprivate var brief: String {
         switch self {
+        case .presenceSolo: "The user logged intentional solo time away from digital distractions. Acknowledge it with understated irony about devices only."
+        case .presenceTogether: "The user logged attentive time with someone important. Acknowledge it with understated irony about devices only; never judge relationships."
         case .missingData: "The user left required tracking data incomplete."
         case .allGood: "The user performed well; roast complacency, not a nonexistent failure."
         case .overallBad: "The verified overall result is Bad; roast only the day's execution without naming a metric."
@@ -50,7 +54,7 @@ enum RoastTarget: String, Sendable {
         case .sleepUnder, .sleepOver, .sleepMet, .sleepConsistency: .sleep
         case .waterIncomplete, .waterMet, .waterConsistency: .water
         case .foodBad, .foodUgly, .foodGood, .foodQuality: .food
-        case .missingData, .allGood, .overallBad, .overallUgly,
+        case .presenceSolo, .presenceTogether, .missingData, .allGood, .overallBad, .overallUgly,
              .trendImproving, .trendSteady, .trendSlipping, .baselineThin: nil
         }
     }
@@ -143,6 +147,10 @@ enum RoastStyleContract {
         intensity: RoastIntensity
     ) -> [String] {
         switch (target, intensity) {
+        // Fixed Gentle voice for Presence, even if accidentally requested at
+        // another intensity. Never joke about missing logs or relationships.
+        case (.presenceSolo, _): ["The phone appears to have survived without supervision.", "Notifications briefly lost custody of the schedule."]
+        case (.presenceTogether, _): ["The notifications appear to have waited their turn for once.", "Shared time appears to have escaped the notification queue."]
         case (.missingData, .gentle): ["The paperwork appears to have developed a fear of evidence.", "The case notes remain admirably free of useful information."]
         case (.missingData, .playful): ["You submitted a blank chart and expected the confidence of a diagnosis.", "You brought paperwork to rounds and forgot the part containing evidence."]
         case (.missingData, .spicy): ["You submitted absence as evidence and expected applause for documentation.", "You abandoned the chart halfway through and still demanded a verdict."]

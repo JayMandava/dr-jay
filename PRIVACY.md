@@ -1,10 +1,12 @@
 # Dr Jay Privacy Policy
 
-Effective October 10, 2026. Dr Jay is developed by Jeyanth Mandava. This policy covers the iPhone app, its widgets, Live Activities, and optional on-device models.
+Effective October 15, 2026. Dr Jay is developed by Jeyanth Mandava. This policy covers the iPhone app, its widgets, Live Activities, and optional on-device models.
 
 ## Your entries stay local
 
-Dr Jay has no account system, advertising, tracking, or developer-operated analytics service. Sleep and water logs, food descriptions and assessments, exercise entries, learned food corrections, check-in messages, and settings are stored on your device. The app and widgets share local storage so logging actions and displayed progress agree.
+Dr Jay has no account system, advertising, tracking, or developer-operated analytics service. Sleep and water logs, food descriptions and assessments, exercise entries, Presence entries and optional notes, learned food corrections, check-in messages, and settings are stored on your device. The app and widgets share local storage so logging actions and displayed progress agree.
+
+Presence is optional. Its categories, minutes, dates, and notes persist in history and JSON backups, unlike ephemeral Brain Dump conversations. Presence summaries are descriptive, do not score relationships, and do not affect daily scores or streaks. Presence commentary uses a fixed local Gentle phrase bank; notes are not sent to a model. Entries can be deleted individually from History.
 
 Your entries are not uploaded to the developer or sent to a remote AI service. Apple Foundation Models and the optional Gemma model process text on your device. Generated daily-report and insights commentary is not saved; sleep, water, and food feedback associated with logged entries may be saved in history.
 

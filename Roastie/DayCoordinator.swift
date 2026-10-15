@@ -307,6 +307,49 @@ final class DayCoordinator {
         persistBackup()
     }
 
+    @discardableResult
+    func logPresence(category: PresenceCategory, minutes: Int, date: Date, note: String) -> Bool {
+        guard (1...1440).contains(minutes), date <= .now else { return false }
+        let key = date.dayKey
+        let existing: DailyLog?
+        do {
+            existing = try context.fetch(FetchDescriptor<DailyLog>(predicate: #Predicate { $0.dayKey == key })).first
+        } catch {
+            AppLogger.report(error, operation: "Fetch Presence day", logger: AppLogger.persistence)
+            return false
+        }
+        let log = existing ?? DailyLog(dayKey: key, date: date.startOfDay, waterGoalBottles: SharedStore.loadSettings().waterGoalBottles)
+        let previous = log.presenceEntries
+        let entries = previous ?? []
+        let summary = PresenceSummary(entries: entries)
+        guard summary.soloMinutes + summary.togetherMinutes + minutes <= 1440 else { return false }
+        if existing == nil { context.insert(log) }
+        log.presenceEntries = entries + [PresenceEntry(
+            category: category, minutes: minutes, timestamp: date,
+            note: String(note.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
+        )]
+        guard saveContext(operation: "Log Presence") else {
+            log.presenceEntries = previous
+            if existing == nil { context.delete(log) }
+            return false
+        }
+        persistBackup()
+        Haptics.tap()
+        return true
+    }
+
+    @discardableResult
+    func deletePresenceEntry(entryID: UUID, dayKey: String) -> Bool {
+        guard let log = log(for: dayKey), let previous = log.presenceEntries else { return false }
+        log.presenceEntries = previous.filter { $0.id != entryID }
+        guard saveContext(operation: "Delete Presence entry") else {
+            log.presenceEntries = previous
+            return false
+        }
+        persistBackup()
+        return true
+    }
+
     func forgetFoodCorrectionMemory(id: UUID) {
         var memories = SharedStore.loadFoodCorrectionMemories()
         memories.removeAll { $0.id == id }

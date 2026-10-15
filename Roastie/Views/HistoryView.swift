@@ -4,6 +4,7 @@ import SwiftData
 struct HistoryView: View {
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
     @State private var settings = SharedStore.loadSettings()
+    @State private var presenceDeleteFailed = false
 
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
 
@@ -47,7 +48,8 @@ struct HistoryView: View {
                 ForEach(logs) { log in
                     let foodEntries = (log.foodEntries ?? []).sorted { $0.timestamp < $1.timestamp }
                     let exerciseEntries = (log.exerciseEntries ?? []).sorted { $0.timestamp < $1.timestamp }
-                    if foodEntries.isEmpty && exerciseEntries.isEmpty {
+                    let presenceEntries = (log.presenceEntries ?? []).sorted { $0.timestamp < $1.timestamp }
+                    if foodEntries.isEmpty && exerciseEntries.isEmpty && presenceEntries.isEmpty {
                         daySummary(log)
                     } else {
                         DisclosureGroup {
@@ -93,6 +95,19 @@ struct HistoryView: View {
                                 }
                                 .padding(.vertical, 4)
                             }
+                            if !presenceEntries.isEmpty {
+                                Text("Presence")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            ForEach(presenceEntries) { entry in
+                                PresenceEntryRow(entry: entry) {
+                                    presenceDeleteFailed = !DayCoordinator.shared.deletePresenceEntry(
+                                        entryID: entry.id, dayKey: log.dayKey
+                                    )
+                                }
+                                .padding(.vertical, 4)
+                            }
                         } label: {
                             daySummary(
                                 log,
@@ -108,6 +123,11 @@ struct HistoryView: View {
         .background(DrJayTheme.canvas)
         .navigationTitle("History")
         .tint(DrJayTheme.primary)
+        .alert("Couldn’t delete Presence entry", isPresented: $presenceDeleteFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Your entry has been kept. Please try again.")
+        }
     }
 
     private func metric(value: Int, label: String) -> some View {
@@ -142,6 +162,12 @@ struct HistoryView: View {
                 }
                 if exerciseCount > 0 {
                     Text(exerciseSummary(log, count: exerciseCount))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                let presence = PresenceSummary(entries: log.presenceEntries ?? [])
+                if !presence.isEmpty {
+                    Text(presence.detail)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

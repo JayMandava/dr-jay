@@ -266,7 +266,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Private by design", systemImage: "lock.shield")
                             .font(.headline)
-                        Text("Roasts, food analysis, exercise logs, and learned corrections stay on device. Health access is read-only. Today's step count is displayed but never stored or exported.")
+                        Text("Roasts, food analysis, exercise and Presence logs, and learned corrections stay on device. Health access is read-only. Today's step count is displayed but never stored or exported.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -281,7 +281,12 @@ struct SettingsView: View {
                         detail: "\(settings.dailyScoreProfile.label) · \(weightSummary(settings.dailyScoreProfile))"
                     )
 
-                    Text("Generate a full report anytime from Today. The score uses fixed arithmetic; only Dr Jay’s commentary is written by the on-device model.")
+                    aboutDetail(
+                        "Presence",
+                        detail: "Optional solo and together time · Always Gentle · No score or streak"
+                    )
+
+                    Text("Generate a full report anytime from Today. The score uses fixed arithmetic; score commentary uses the on-device model. Presence uses a fixed local Gentle phrase bank and never changes the score.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -306,7 +311,7 @@ struct SettingsView: View {
                     }
                     .disabled(isResetting)
                 } footer: {
-                    Text("Erases all logged history, including exercise, learned food corrections, streaks, and settings, and starts onboarding over. This can't be undone.")
+                    Text("Erases all logged history, including exercise and Presence notes, learned food corrections, streaks, and settings, and starts onboarding over. This can't be undone.")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -331,7 +336,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This deletes all sleep, water, food, and exercise history, learned food corrections, your streak, and every setting. It can't be undone.")
+                Text("This deletes all sleep, water, food, exercise, and Presence history and notes, learned food corrections, your streak, and every setting. It can't be undone.")
             }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
                 switch result {

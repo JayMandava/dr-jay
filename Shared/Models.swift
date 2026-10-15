@@ -191,6 +191,8 @@ final class DailyLog {
     var foodScoreVersion: Int?
     /// Optional keeps existing SwiftData stores migratable.
     var exerciseEntries: [ExerciseEntry]?
+    /// Optional so pre-Presence stores can migrate without synthesized history.
+    var presenceEntries: [PresenceEntry]?
 
     init(dayKey: String, date: Date, waterGoalBottles: Int) {
         self.dayKey = dayKey
@@ -207,6 +209,7 @@ final class DailyLog {
         self.foodScoreIsCurrent = true
         self.foodScoreVersion = FoodScoreCalculator.version
         self.exerciseEntries = []
+        self.presenceEntries = []
     }
 
     var sleepGoalMet: Bool? {

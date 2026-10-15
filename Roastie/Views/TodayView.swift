@@ -11,6 +11,7 @@ struct TodayView: View {
     @State private var showSleepSheet = false
     @State private var showFoodSheet = false
     @State private var showExerciseSheet = false
+    @State private var showPresenceSheet = false
     @State private var showBrainDump = false
     @State private var isLoggingWater = false
     @State private var loggedFoodResult: FoodEntry?
@@ -136,6 +137,11 @@ struct TodayView: View {
                         showExerciseSheet = true
                     }
 
+                    PresenceCard(summary: PresenceSummary(entries: today?.presenceEntries ?? [])) {
+                        Haptics.tap()
+                        showPresenceSheet = true
+                    }
+
                     Button {
                         Haptics.tap()
                         showDailyReport = true
@@ -230,10 +236,14 @@ struct TodayView: View {
             .fullScreenCover(isPresented: $showBrainDump) {
                 BrainDumpView()
             }
+            .sheet(isPresented: $showPresenceSheet) {
+                LogPresenceSheet()
+            }
             .sheet(isPresented: $showDailyReport) {
                 DailyReportSheet(
                     result: reportResult,
                     commentary: reportCommentary,
+                    presence: PresenceSummary(entries: today?.presenceEntries ?? []),
                     isGenerating: isGeneratingReport,
                     onRegenerate: {
                         Task { await generateDailyReport() }
@@ -432,6 +442,7 @@ private struct StepCountCard: View {
 private struct DailyReportSheet: View {
     let result: DailySummaryResult?
     let commentary: String?
+    let presence: PresenceSummary
     let isGenerating: Bool
     let onRegenerate: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -481,6 +492,10 @@ private struct DailyReportSheet: View {
                         }
                         .padding(16)
                         .clinicalCard()
+                    }
+
+                    if !presence.isEmpty {
+                        PresenceCard(summary: presence, title: "Presence · optional context")
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
