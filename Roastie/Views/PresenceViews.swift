@@ -172,12 +172,10 @@ struct LogPresenceSheet: View {
             } message: {
                 Text("Check the duration and date, and keep the day's combined total within 1,440 minutes. If these are correct, please try saving again.")
             }
+            .onAppear { focusedField = .note }
             .tint(DrJayTheme.primary)
         }
-        // Presence has more controls than the single-input food/exercise
-        // sheets. Give those controls room without returning to full screen.
-        .presentationDetents([.fraction(0.8), .large])
-        .presentationDragIndicator(.visible)
+        .presentationDetents([.medium])
     }
 }
 
