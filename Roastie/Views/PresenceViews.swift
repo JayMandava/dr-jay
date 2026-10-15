@@ -174,7 +174,9 @@ struct LogPresenceSheet: View {
             }
             .tint(DrJayTheme.primary)
         }
-        .presentationDetents([.medium, .large])
+        // Presence has more controls than the single-input food/exercise
+        // sheets. Give those controls room without returning to full screen.
+        .presentationDetents([.fraction(0.8), .large])
         .presentationDragIndicator(.visible)
     }
 }
