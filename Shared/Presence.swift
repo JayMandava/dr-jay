@@ -4,7 +4,7 @@ enum PresenceCategory: String, Codable, CaseIterable, Identifiable, Sendable {
     case solo, together
 
     var id: Self { self }
-    var label: String { self == .solo ? "Unplugged — solo" : "Time together" }
+    var label: String { self == .solo ? "Solo" : "Time together" }
     var symbol: String { self == .solo ? "leaf" : "person.2" }
 }
 
@@ -25,7 +25,7 @@ struct PresenceSummary {
     var isEmpty: Bool { entries.isEmpty }
     var detail: String {
         var parts: [String] = []
-        if soloMinutes > 0 { parts.append("\(soloMinutes) min unplugged — solo") }
+        if soloMinutes > 0 { parts.append("\(soloMinutes) min solo") }
         if togetherMinutes > 0 { parts.append("\(togetherMinutes) min together") }
         return parts.joined(separator: " · ")
     }
