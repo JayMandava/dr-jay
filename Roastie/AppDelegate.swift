@@ -1,10 +1,12 @@
 import UIKit
+import AppIntents
 import UserNotifications
 import BackgroundTasks
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         AppConfig.recordInstallDateIfNeeded()
+        RoastieShortcuts.updateAppShortcutParameters()
         UNUserNotificationCenter.current().delegate = self
         NotificationManager.registerCategories()
 
@@ -113,3 +115,4 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         }
     }
 }
+

@@ -1,4 +1,5 @@
 import AppIntents
+import Foundation
 
 /// A bounded set of durations, so it can be embedded directly in a Siri
 /// trigger phrase (App Intents only allows AppEntity/AppEnum there — a raw
@@ -59,8 +60,48 @@ struct LogWaterIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let receipt = try DayCoordinator.shared.logWithSiri(.water)
+        let receipt = try await SiriWaterConfirmation.run(
+            confirm: {
+                try await requestConfirmation(
+                    actionName: .continue,
+                    dialog: "Log one bottle of WATER in Dr Jay? Cancel if you meant food."
+                )
+            },
+            save: { try DayCoordinator.shared.logWithSiri(.water) }
+        )
         return .result(dialog: IntentDialog(stringLiteral: receipt.dialog))
+    }
+}
+
+/// Food has its own explicit route. Free-form food text is collected as a
+/// parameter rather than interpolated into an AppShortcut trigger phrase.
+struct LogFoodIntent: AppIntent {
+    static let title: LocalizedStringResource = "Log Food"
+    static let description = IntentDescription("Logs what you ate in Dr Jay, without adding water or sleep.")
+    // Foreground keeps the existing on-device food-assessment flow supported.
+    static let openAppWhenRun: Bool = true
+
+    @Parameter(title: "Food", requestValueDialog: "What did you eat?")
+    var food: String
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Log food: \(\.$food)")
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        guard SharedStore.loadSettings().onboardingComplete else {
+            throw SiriLoggingError.onboardingRequired
+        }
+        let text = food.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { throw FoodEntryPersistenceError.emptyDescription }
+        guard let entry = await DayCoordinator.shared.logFood(text) else {
+            throw FoodEntryPersistenceError.saveFailed
+        }
+        let dialog = entry.verdict == .unanalyzed
+            ? "Food saved. This entry still needs review in History."
+            : "Food saved. See Dr Jay for the assessment."
+        return .result(dialog: IntentDialog(stringLiteral: dialog))
     }
 }
 
@@ -143,6 +184,18 @@ struct RoastieShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Log Water",
             systemImageName: "drop.fill"
+        )
+        AppShortcut(
+            intent: LogFoodIntent(),
+            phrases: [
+                "Log food to \(.applicationName)",
+                "Log food in \(.applicationName)",
+                "Log my food to \(.applicationName)",
+                "Log my meal in \(.applicationName)",
+                "Add a meal to \(.applicationName)",
+            ],
+            shortTitle: "Log Food",
+            systemImageName: "fork.knife"
         )
         AppShortcut(
             intent: LogSleepDurationIntent(),
