@@ -85,10 +85,12 @@ final class LongitudinalInsightsCalculatorTests: XCTestCase {
             log(daysBefore: offset, reference: reference, sleep: 7, water: 4, food: 40)
         }
         current.dropFirst().forEach {
+            $0.foodEntries = []
             $0.foodScore = nil
             $0.foodScoreIsCurrent = true
         }
         previous.dropFirst().forEach {
+            $0.foodEntries = []
             $0.foodScore = nil
             $0.foodScoreIsCurrent = true
         }
@@ -127,6 +129,64 @@ final class LongitudinalInsightsCalculatorTests: XCTestCase {
         XCTAssertNotEqual(report.primaryFocus, "Exercise")
     }
 
+    func testPartialDaysAreExcludedFromComparableFoodScoresAndCoreCompleteness() {
+        let reference = date(2026, 9, 29)
+        let complete = log(daysBefore: 1, reference: reference, sleep: 7, water: 4, food: 90)
+        let partial = log(daysBefore: 0, reference: reference, sleep: 7, water: 4, food: 30)
+        partial.foodEntries = [foodEntry(score: 30), foodEntry(score: nil)]
+        // A stale cached score must not disguise incomplete coverage.
+        partial.foodScore = 100
+        partial.foodScoreVersion = 2
+
+        let report = LongitudinalInsightsCalculator.calculate(
+            logs: [complete, partial], period: .sevenDays,
+            referenceDate: reference, calendar: calendar
+        )
+        let food = report.metrics.first { $0.id == "food" }
+        XCTAssertEqual(food?.score, 90)
+        XCTAssertEqual(report.trackedDays, 2)
+        XCTAssertEqual(report.completeDays, 1)
+        XCTAssertTrue(food?.detail.contains("1 partial day excluded") == true)
+        XCTAssertTrue(food?.detail.contains("1 food entry needs review") == true)
+    }
+
+    func testAllUnknownDaysRemainLoggedWithoutFoodBaseline() {
+        let reference = date(2026, 9, 29)
+        let unresolved = log(daysBefore: 0, reference: reference, sleep: 7, water: 4, food: 90)
+        unresolved.foodEntries = [foodEntry(score: nil)]
+        let report = LongitudinalInsightsCalculator.calculate(
+            logs: [unresolved], period: .sevenDays,
+            referenceDate: reference, calendar: calendar
+        )
+        let food = report.metrics.first { $0.id == "food" }
+        XCTAssertNil(food?.score)
+        XCTAssertEqual(report.completeDays, 0)
+        XCTAssertEqual(report.trackedDays, 1)
+        XCTAssertTrue(food?.detail.contains("1 food entry needs review") == true)
+    }
+
+    func testCorrectedEntryRestoresComparabilityWithoutRefreshingLegacyCache() {
+        let reference = date(2026, 9, 29)
+        let restored = log(daysBefore: 0, reference: reference, sleep: 7, water: 4, food: 90)
+        restored.foodScore = nil
+        restored.foodScoreVersion = 2
+        restored.foodEntries = [foodEntry(score: 90), foodEntry(score: 30)]
+        let report = LongitudinalInsightsCalculator.calculate(
+            logs: [restored], period: .sevenDays,
+            referenceDate: reference, calendar: calendar
+        )
+        XCTAssertEqual(report.metrics.first { $0.id == "food" }?.score, 60)
+        XCTAssertEqual(report.completeDays, 1)
+    }
+
+    private func foodEntry(score: Int?) -> FoodEntry {
+        FoodEntry(
+            text: "Test food", timestamp: .distantPast,
+            verdict: score.map { $0 >= 80 ? FoodVerdict.healthy : FoodVerdict.unhealthy } ?? .unanalyzed,
+            assessment: nil, roast: nil, qualityScore: score
+        )
+    }
+
     private func log(
         daysBefore: Int,
         reference: Date,
@@ -138,6 +198,7 @@ final class LongitudinalInsightsCalculatorTests: XCTestCase {
         let log = DailyLog(dayKey: day.dayKey, date: day, waterGoalBottles: 4)
         log.sleepHours = sleep
         log.waterBottlesLogged = water
+        log.foodEntries = [foodEntry(score: food)]
         log.foodScore = food
         log.foodScoreIsCurrent = true
         return log
@@ -147,3 +208,4 @@ final class LongitudinalInsightsCalculatorTests: XCTestCase {
         calendar.date(from: DateComponents(year: year, month: month, day: day))!
     }
 }
+

@@ -189,8 +189,12 @@ struct HistoryView: View {
 
     private func foodSummary(_ log: DailyLog, count: Int) -> String {
         let entryCount = "\(count) food entr\(count == 1 ? "y" : "ies")"
-        guard let score = log.foodScore else { return "\(entryCount) · Food score —" }
-        return "\(entryCount) · \(score) \(FoodScoreBand.classify(score).rawValue)"
+        let aggregate = log.foodScoreAggregate
+        guard let score = aggregate.score else {
+            return "\(entryCount) · Needs review · \(aggregate.coverageDescription)"
+        }
+        let label = aggregate.isPartial ? "Partial estimate" : "Food score"
+        return "\(entryCount) · \(label) \(score) · \(aggregate.coverageDescription)"
     }
 
     private func exerciseSummary(_ log: DailyLog, count: Int) -> String {
@@ -206,3 +210,4 @@ struct HistoryView: View {
             .foregroundStyle(bothMet ? DrJayTheme.primary : DrJayTheme.roast)
     }
 }
+

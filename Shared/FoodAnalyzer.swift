@@ -17,16 +17,51 @@ struct DailyFoodAssessment: Sendable {
     var summary: String?
 }
 
+/// Entry-count coverage, not calorie coverage or model confidence. Derived from
+/// the persisted entries so old caches and restored backups cannot hide known food.
+struct FoodScoreAggregate: Equatable, Sendable {
+    let score: Int?
+    let assessedEntryCount: Int
+    let totalEntryCount: Int
+    let unresolvedEntryIDs: [UUID]
+
+    var isComplete: Bool { totalEntryCount > 0 && assessedEntryCount == totalEntryCount }
+    var isPartial: Bool { assessedEntryCount > 0 && assessedEntryCount < totalEntryCount }
+    var coverageDescription: String { "\(assessedEntryCount) of \(totalEntryCount) entries assessed" }
+}
+
+/// An asynchronous assessment may only replace the exact entry it started with.
+/// Manual corrections, edits and deletion win over a late model response.
+enum FoodEntryAssessmentUpdate {
+    static func applying(_ assessed: FoodEntry, to original: FoodEntry, in entries: [FoodEntry]) -> [FoodEntry]? {
+        guard assessed.id == original.id,
+              let index = entries.firstIndex(where: { $0.id == original.id }),
+              entries[index] == original else { return nil }
+        var result = entries
+        result[index] = assessed
+        return result
+    }
+}
+
 /// Converts bounded per-entry nutrition quality into a stable daily score.
 /// The arithmetic mean is intentionally order-independent.
 enum FoodScoreCalculator {
-    static let version = 2
+    static let version = 3
+
+    static func aggregate(entries: [FoodEntry]) -> FoodScoreAggregate {
+        let scores = entries.compactMap(entryScore)
+        let score = scores.isEmpty ? nil
+            : Int((Double(scores.reduce(0, +)) / Double(scores.count)).rounded())
+        return FoodScoreAggregate(
+            score: score,
+            assessedEntryCount: scores.count,
+            totalEntryCount: entries.count,
+            unresolvedEntryIDs: entries.filter { entryScore($0) == nil }.map(\.id)
+        )
+    }
 
     static func score(entries: [FoodEntry]) -> Int? {
-        guard !entries.isEmpty else { return nil }
-        let scores = entries.compactMap(entryScore)
-        guard scores.count == entries.count else { return nil }
-        return Int((Double(scores.reduce(0, +)) / Double(scores.count)).rounded())
+        aggregate(entries: entries).score
     }
 
     static func normalized(_ score: Int, for verdict: FoodVerdict) -> Int? {
@@ -130,9 +165,11 @@ enum FoodAnalyzer {
         intensity: RoastIntensity,
         roastsEnabled: Bool
     ) async -> DailyFoodAssessment? {
-        guard let score = FoodScoreCalculator.score(entries: entries) else { return nil }
+        let aggregate = FoodScoreCalculator.aggregate(entries: entries)
+        guard let score = aggregate.score else { return nil }
 
-        guard roastsEnabled else {
+        // Do not ask the model to summarize unknown food as if the day were complete.
+        guard roastsEnabled, aggregate.isComplete else {
             return DailyFoodAssessment(score: score, summary: nil)
         }
 
@@ -399,3 +436,4 @@ enum FoodAnalyzer {
     }
     #endif
 }
+

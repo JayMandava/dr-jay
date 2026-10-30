@@ -5,10 +5,10 @@ final class FoodScoreCalculatorTests: XCTestCase {
     func testEmptyAndUnanalyzedLogsHaveNoScore() {
         XCTAssertNil(FoodScoreCalculator.score(entries: []))
         XCTAssertNil(FoodScoreCalculator.score(entries: [entry(.unanalyzed, score: nil)]))
-        XCTAssertNil(FoodScoreCalculator.score(entries: [
+        XCTAssertEqual(FoodScoreCalculator.score(entries: [
             entry(.healthy, score: 90),
             entry(.unanalyzed, score: nil)
-        ]))
+        ]), 90)
     }
 
     func testVerdictRangesClampModelBoundaryViolations() {
@@ -79,6 +79,88 @@ final class FoodScoreCalculatorTests: XCTestCase {
         )
     }
 
+    func testMixedEntriesPreserveKnownMeanAndCoverage() {
+        let unknown = entry(.unanalyzed, score: 100)
+        let aggregate = FoodScoreCalculator.aggregate(entries: [
+            entry(.healthy, score: 90), entry(.unhealthy, score: 30), unknown
+        ])
+        XCTAssertEqual(aggregate.score, 60)
+        XCTAssertEqual(aggregate.assessedEntryCount, 2)
+        XCTAssertEqual(aggregate.totalEntryCount, 3)
+        XCTAssertEqual(aggregate.unresolvedEntryIDs, [unknown.id])
+        XCTAssertTrue(aggregate.isPartial)
+        XCTAssertFalse(aggregate.isComplete)
+    }
+
+    func testEmptyAndAllUnknownCoverageIsNotCompleteOrZero() {
+        for entries in [[], [entry(.unanalyzed, score: nil)]] {
+            let aggregate = FoodScoreCalculator.aggregate(entries: entries)
+            XCTAssertNil(aggregate.score)
+            XCTAssertEqual(aggregate.assessedEntryCount, 0)
+            XCTAssertFalse(aggregate.isPartial)
+            XCTAssertFalse(aggregate.isComplete)
+        }
+    }
+
+    func testValidZeroIsAssessedAndUnknownIsExcluded() {
+        let aggregate = FoodScoreCalculator.aggregate(entries: [
+            entry(.unhealthy, score: 0), entry(.unanalyzed, score: nil)
+        ])
+        XCTAssertEqual(aggregate.score, 0)
+        XCTAssertEqual(aggregate.assessedEntryCount, 1)
+        XCTAssertTrue(aggregate.isPartial)
+    }
+
+    func testCorrectionAndDeletionRestoreCompleteCoverage() {
+        let known = entry(.healthy, score: 90)
+        var unresolved = entry(.unanalyzed, score: nil)
+        XCTAssertTrue(FoodScoreCalculator.aggregate(entries: [known, unresolved]).isPartial)
+        unresolved.verdict = .unhealthy
+        unresolved.qualityScore = 30
+        let corrected = FoodScoreCalculator.aggregate(entries: [known, unresolved])
+        XCTAssertEqual(corrected.score, 60)
+        XCTAssertTrue(corrected.isComplete)
+        XCTAssertTrue(FoodScoreCalculator.aggregate(entries: [known]).isComplete)
+    }
+
+    func testLateAssessmentCannotOverwriteCorrectionOrResurrectDeletion() {
+        let original = entry(.unanalyzed, score: nil)
+        var assessed = original
+        assessed.verdict = .healthy
+        assessed.qualityScore = 90
+        var corrected = original
+        corrected.verdict = .unhealthy
+        corrected.wasManuallyCorrected = true
+        XCTAssertNil(FoodEntryAssessmentUpdate.applying(assessed, to: original, in: [corrected]))
+        XCTAssertNil(FoodEntryAssessmentUpdate.applying(assessed, to: original, in: []))
+        var edited = original
+        edited.text = "Different meal"
+        XCTAssertNil(FoodEntryAssessmentUpdate.applying(assessed, to: original, in: [edited]))
+    }
+
+    func testAssessmentPreservesConcurrentlyAddedEntries() throws {
+        let original = entry(.unanalyzed, score: nil)
+        let other = entry(.unhealthy, score: 30)
+        var assessed = original
+        assessed.verdict = .healthy
+        assessed.qualityScore = 90
+        let updated = try XCTUnwrap(FoodEntryAssessmentUpdate.applying(
+            assessed, to: original, in: [original, other]
+        ))
+        XCTAssertEqual(updated, [assessed, other])
+        XCTAssertEqual(FoodScoreCalculator.aggregate(entries: updated).score, 60)
+        XCTAssertTrue(FoodScoreCalculator.aggregate(entries: updated).isComplete)
+    }
+
+    func testPartialDayDoesNotGenerateAnAllFoodSummary() async {
+        let result = await FoodAnalyzer.scoreDay(
+            entries: [entry(.healthy, score: 90), entry(.unanalyzed, score: nil)],
+            intensity: .gentle, roastsEnabled: true
+        )
+        XCTAssertEqual(result?.score, 90)
+        XCTAssertNil(result?.summary)
+    }
+
     private func entry(_ verdict: FoodVerdict, score: Int?) -> FoodEntry {
         FoodEntry(
             text: "Test food",
@@ -90,3 +172,4 @@ final class FoodScoreCalculatorTests: XCTestCase {
         )
     }
 }
+
