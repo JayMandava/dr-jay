@@ -122,6 +122,49 @@ final class DayCoordinator {
 
     // MARK: - Logging
 
+    /// Persist and return a truthful Siri receipt without awaiting ancillary work.
+    func logWithSiri(_ action: SiriLogAction) throws -> SiriLogReceipt {
+        let settings = SharedStore.loadSettings()
+        guard settings.onboardingComplete else { throw SiriLoggingError.onboardingRequired }
+        let log = todayLog()
+        let receipt = try SiriLogging.perform(
+            action, log: log, onboardingComplete: true,
+            window: currentWindow(settings: settings),
+            save: { self.saveContext(operation: "Save Siri entry") }
+        )
+        if receipt.changed {
+            storeSnapshot(log: log)
+            // Best effort only: a background Siri invocation may be suspended.
+            // The record and receipt do not depend on this task finishing.
+            Task { @MainActor in
+                guard log.dayKey == Date().dayKey else { return }
+                await self.pushSnapshot(log: log, settings: SharedStore.loadSettings())
+                guard log.dayKey == Date().dayKey else { return }
+                await self.syncLiveActivity(log: log)
+                self.persistBackup()
+            }
+        }
+        return receipt
+    }
+
+    func siriWaterStatus() throws -> String {
+        SiriLogging.waterStatus(log: try siriLogForToday())
+    }
+
+    func siriSleepStatus() throws -> String {
+        SiriLogging.sleepStatus(log: try siriLogForToday())
+    }
+
+    private func siriLogForToday() throws -> DailyLog? {
+        let key = Date().dayKey
+        do {
+            return try context.fetch(FetchDescriptor<DailyLog>(predicate: #Predicate { $0.dayKey == key })).first
+        } catch {
+            AppLogger.report(error, operation: "Read Siri status", logger: AppLogger.persistence)
+            throw SiriLoggingError.readFailed
+        }
+    }
+
     @discardableResult
     func logWaterBottle(useOnDeviceModel: Bool = true) async -> Bool {
         let log = todayLog()
@@ -643,7 +686,8 @@ final class DayCoordinator {
     /// every already-logged check-in still said "met" under the old rule).
     /// Status badges should always reflect "given today's numbers and
     /// today's rule, right now" — never a frozen historical verdict.
-    private func pushSnapshot(log: DailyLog, settings: AppSettings) async {
+    private func storeSnapshot(log: DailyLog) {
+        guard log.dayKey == Date().dayKey else { return }
         let latestSleepCheckIn = log.checkIns.filter { $0.kind == .sleep }.max { $0.timestamp < $1.timestamp }
         let latestWaterCheckIn = log.checkIns.filter { $0.kind == .water }.max { $0.timestamp < $1.timestamp }
 
@@ -668,6 +712,11 @@ final class DayCoordinator {
         )
         SharedStore.save(snapshot)
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    private func pushSnapshot(log: DailyLog, settings: AppSettings) async {
+        guard log.dayKey == Date().dayKey else { return }
+        storeSnapshot(log: log)
         let steps: Int?
         do {
             steps = try await HealthKitManager.shared.stepsToday()
@@ -675,6 +724,7 @@ final class DayCoordinator {
             AppLogger.report(error, operation: "Read steps for daily summary", logger: AppLogger.health)
             steps = nil
         }
+        guard log.dayKey == Date().dayKey else { return }
         let summaryInput = DailySummaryInput(
             sleepHours: log.sleepHours,
             waterBottlesLogged: log.waterBottlesLogged,
