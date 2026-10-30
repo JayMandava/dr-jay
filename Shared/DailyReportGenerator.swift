@@ -160,6 +160,15 @@ enum DailyReportGenerator {
         result: DailySummaryResult
     ) -> (verdict: String, action: String) {
         guard result.isComplete else {
+            if let coverage = input.foodCoverage,
+               coverage.totalEntryCount > 0, !coverage.isComplete {
+                return (
+                    "The report is provisional. Food: \(coverage.coverageDescription).",
+                    input.sleepHours == nil
+                        ? "Log your sleep and review the unassessed food entries in History."
+                        : "Review the unassessed food entries in History; recognised entries already count."
+                )
+            }
             return (
                 "The report is incomplete.",
                 "Log the missing sleep or food data before asking for another reading."
@@ -200,3 +209,4 @@ enum DailyReportGenerator {
             .caseInsensitiveCompare(previous.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
     }
 }
+

@@ -212,6 +212,11 @@ final class DailyLog {
         self.presenceEntries = []
     }
 
+    /// Coverage and score are derived, not an additional persisted source of truth.
+    var foodScoreAggregate: FoodScoreAggregate {
+        FoodScoreCalculator.aggregate(entries: foodEntries ?? [])
+    }
+
     var sleepGoalMet: Bool? {
         guard sleepHours != nil else { return nil }
         return GoalCalculator.sleepMet(hours: sleepHours)
@@ -402,3 +407,4 @@ struct AppSettings: Codable, Sendable {
         )
     }
 }
+

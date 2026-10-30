@@ -205,7 +205,9 @@ final class DayCoordinator {
         saveContext(operation: "Log food entry")
         persistBackup()
 
+        let originalEntry = entry
         let settings = SharedStore.loadSettings()
+        await pushSnapshot(log: log, settings: settings)
         guard let assessment = await FoodAnalyzer.analyze(
             text,
             intensity: settings.roastIntensity,
@@ -213,11 +215,9 @@ final class DayCoordinator {
             exactMemory: exactMemory,
             relatedMemories: relatedMemories
         ) else {
-            log.foodScoreIsCurrent = true
-            log.foodScoreVersion = FoodScoreCalculator.version
-            saveContext(operation: "Record unavailable food assessment")
-            persistBackup()
-            return entry
+            await refreshFoodScore(for: log, settings: settings)
+            await pushSnapshot(log: log, settings: settings)
+            return (log.foodEntries ?? []).first { $0.id == entry.id }
         }
 
         entry.verdict = assessment.verdict
@@ -227,10 +227,16 @@ final class DayCoordinator {
         entry.usedCorrectionMemory = exactMemory != nil
         entry.caffeineCount = assessment.caffeineCount
         entry.sugaryItemCount = assessment.sugaryItemCount
-        replaceFoodEntry(entry, in: log)
+        guard let updatedEntries = FoodEntryAssessmentUpdate.applying(
+            entry, to: originalEntry, in: log.foodEntries ?? []
+        ) else {
+            return (log.foodEntries ?? []).first { $0.id == entry.id }
+        }
+        log.foodEntries = updatedEntries
         saveContext(operation: "Save food assessment")
         persistBackup()
         await refreshFoodScore(for: log, settings: settings)
+        await pushSnapshot(log: log, settings: settings)
         return entry
     }
 
@@ -266,7 +272,9 @@ final class DayCoordinator {
         invalidateFoodScore(for: log)
         saveContext(operation: "Correct food verdict")
         persistBackup()
-        await refreshFoodScore(for: log, settings: SharedStore.loadSettings())
+        let settings = SharedStore.loadSettings()
+        await refreshFoodScore(for: log, settings: settings)
+        if log.dayKey == Date().dayKey { await pushSnapshot(log: log, settings: settings) }
     }
 
     func deleteFoodEntry(entryID: UUID, dayKey: String) async {
@@ -276,7 +284,9 @@ final class DayCoordinator {
         invalidateFoodScore(for: log)
         saveContext(operation: "Delete food entry")
         persistBackup()
-        await refreshFoodScore(for: log, settings: SharedStore.loadSettings())
+        let settings = SharedStore.loadSettings()
+        await refreshFoodScore(for: log, settings: settings)
+        if log.dayKey == Date().dayKey { await pushSnapshot(log: log, settings: settings) }
     }
 
     @discardableResult
@@ -357,16 +367,9 @@ final class DayCoordinator {
         persistBackup()
     }
 
-    private func replaceFoodEntry(_ entry: FoodEntry, in log: DailyLog) {
-        guard var entries = log.foodEntries,
-              let index = entries.firstIndex(where: { $0.id == entry.id })
-        else { return }
-        entries[index] = entry
-        log.foodEntries = entries
-    }
-
     private func invalidateFoodScore(for log: DailyLog) {
-        log.foodScore = nil
+        // Keep the recognised entries visible while the new entry is assessed.
+        log.foodScore = log.foodScoreAggregate.score
         log.foodScoreSummary = nil
         log.foodScoreIsCurrent = false
         log.foodScoreVersion = nil
@@ -389,6 +392,9 @@ final class DayCoordinator {
             intensity: settings.roastIntensity,
             roastsEnabled: settings.foodRoastsEnabled
         )
+        // Another log, correction or deletion may have completed while the
+        // optional narrative was being generated. Never cache its stale result.
+        guard (log.foodEntries ?? []) == entries else { return }
         log.foodScore = assessment?.score
         log.foodScoreSummary = assessment?.summary
         log.foodScoreIsCurrent = true
@@ -673,10 +679,11 @@ final class DayCoordinator {
             sleepHours: log.sleepHours,
             waterBottlesLogged: log.waterBottlesLogged,
             waterGoalBottles: log.waterGoalBottles,
-            foodScore: log.foodScore,
+            foodScore: log.foodScoreAggregate.score,
             steps: steps,
             exerciseMinutes: ExerciseAnalyzer.summary(entries: log.exerciseEntries ?? []).scoredMinutes,
-            exerciseEntryCount: (log.exerciseEntries ?? []).count
+            exerciseEntryCount: (log.exerciseEntries ?? []).count,
+            foodCoverage: log.foodScoreAggregate
         )
         await NotificationManager.rescheduleAll(
             settings: settings,
@@ -729,3 +736,4 @@ final class DayCoordinator {
         }
     }
 }
+

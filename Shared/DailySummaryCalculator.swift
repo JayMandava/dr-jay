@@ -8,6 +8,7 @@ struct DailySummaryInput: Equatable, Sendable {
     let steps: Int?
     let exerciseMinutes: Int?
     let exerciseEntryCount: Int
+    var foodCoverage: FoodScoreAggregate? = nil
 }
 
 struct DailySummaryResult: Equatable, Sendable {
@@ -87,6 +88,7 @@ enum DailySummaryCalculator {
         let score = Int((weightedScores.reduce(0) { $0 + $1.score * $1.weight } / totalWeight).rounded())
         let band = DailySummaryBand.classify(score)
         let complete = input.sleepHours != nil && input.foodScore != nil
+            && (input.foodCoverage?.isComplete ?? true)
         let configuredWeights: [DailyScoreMetric: Double] = [
             .food: weights.food,
             .sleep: weights.sleep,
@@ -134,7 +136,10 @@ enum DailySummaryCalculator {
     private static func detail(for input: DailySummaryInput) -> String {
         let sleep = input.sleepHours.map { String(format: "Sleep %.1fh", $0) } ?? "Sleep —"
         let water = "Water \(max(0, input.waterBottlesLogged))/\(max(1, input.waterGoalBottles))"
-        let food = input.foodScore.map { "Food \($0.clamped(to: 0...100))" } ?? "Food —"
+        var food = input.foodScore.map { "Food \($0.clamped(to: 0...100))" } ?? "Food —"
+        if let coverage = input.foodCoverage, !coverage.isComplete, coverage.totalEntryCount > 0 {
+            food += " (\(coverage.isPartial ? "partial estimate; " : "")\(coverage.coverageDescription))"
+        }
         let steps = input.steps.map { "Steps \($0.formatted())" } ?? "Steps —"
         let exercise: String?
         if let minutes = input.exerciseMinutes {
@@ -190,3 +195,4 @@ private extension Comparable {
         min(max(self, range.lowerBound), range.upperBound)
     }
 }
+

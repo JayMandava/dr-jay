@@ -70,6 +70,31 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertEqual(payload.foodCorrectionMemories, [memory])
     }
 
+    func testLegacyNilScoreBackupRecomputesPartialCoverageFromEntries() throws {
+        let source = DailyLog(dayKey: "2026-09-23", date: TestSupport.date(23), waterGoalBottles: 4)
+        source.foodEntries = [
+            FoodEntry(text: "Known", timestamp: .distantPast, verdict: .healthy,
+                      assessment: nil, roast: nil),
+            FoodEntry(text: "Unresolved", timestamp: .distantPast, verdict: .unanalyzed,
+                      assessment: nil, roast: nil)
+        ]
+        source.foodScore = nil
+        source.foodScoreIsCurrent = true
+        source.foodScoreVersion = 2
+        let url = FileManager.default.temporaryDirectory.appending(path: "partial-\(UUID()).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try BackupManager.write([source], to: url)
+        let saved = try XCTUnwrap(BackupManager.read(from: url).logs.first)
+        let restored = DailyLog(dayKey: saved.dayKey, date: .distantPast, waterGoalBottles: 1)
+        BackupManager.restore(saved, into: restored)
+        XCTAssertEqual(restored.foodEntries, source.foodEntries)
+        XCTAssertEqual(restored.foodScoreAggregate.score, 90)
+        XCTAssertTrue(restored.foodScoreAggregate.isPartial)
+        XCTAssertEqual(restored.foodScoreAggregate.assessedEntryCount, 1)
+        XCTAssertEqual(restored.foodScoreAggregate.totalEntryCount, 2)
+        XCTAssertEqual(restored.foodScoreAggregate.unresolvedEntryIDs, [source.foodEntries![1].id])
+    }
+
     func testVersionOneBackupDefaultsToNoFoodEntries() throws {
         let json = """
         {
@@ -143,3 +168,4 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertEqual(inferred.first?.verdict, .healthy)
     }
 }
+
