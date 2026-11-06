@@ -12,6 +12,26 @@ enum NotificationManager {
     @MainActor private static var pendingSettings: AppSettings?
     @MainActor private static var pendingSummary: DailySummaryInput?
 
+    static func dailySummaryIdentifier(for dayKey: String) -> String {
+        "daily.summary.\(dayKey)"
+    }
+
+    /// Invalidate only this day's stale score after a ledger mutation. Removing
+    /// pending delivery also closes the gap before asynchronous rescheduling.
+    static func invalidateDailySummary(
+        for dayKey: String,
+        removePending: ([String]) -> Void = {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: $0)
+        },
+        removeDelivered: ([String]) -> Void = {
+            UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: $0)
+        }
+    ) {
+        let identifiers = [dailySummaryIdentifier(for: dayKey)]
+        removePending(identifiers)
+        removeDelivered(identifiers)
+    }
+
     static func registerCategories() {
         let sleepYes = UNNotificationAction(identifier: AppConfig.NotificationAction.sleepYes, title: "Yes, within range", options: [])
         let sleepNo = UNNotificationAction(identifier: AppConfig.NotificationAction.sleepNo, title: "No", options: [])
@@ -146,7 +166,7 @@ enum NotificationManager {
 
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
             let request = UNNotificationRequest(
-                identifier: "daily.summary.\(day.dayKey)",
+                identifier: dailySummaryIdentifier(for: day.dayKey),
                 content: content,
                 trigger: trigger
             )

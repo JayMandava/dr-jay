@@ -8,6 +8,7 @@ struct DailySummaryInput: Equatable, Sendable {
     let steps: Int?
     let exerciseMinutes: Int?
     let exerciseEntryCount: Int
+    var exposures: ExposureSummary = ExposureSummary()
     var foodCoverage: FoodScoreAggregate? = nil
 }
 
@@ -85,7 +86,8 @@ enum DailySummaryCalculator {
         }
 
         let totalWeight = weightedScores.reduce(0) { $0 + $1.weight }
-        let score = Int((weightedScores.reduce(0) { $0 + $1.score * $1.weight } / totalWeight).rounded())
+        let baseScore = Int((weightedScores.reduce(0) { $0 + $1.score * $1.weight } / totalWeight).rounded())
+        let score = max(0, min(100, baseScore) - input.exposures.penalty)
         let band = DailySummaryBand.classify(score)
         let complete = input.sleepHours != nil && input.foodScore != nil
             && (input.foodCoverage?.isComplete ?? true)
@@ -149,7 +151,7 @@ enum DailySummaryCalculator {
         } else {
             exercise = nil
         }
-        return [sleep, water, food, steps, exercise].compactMap { $0 }.joined(separator: " · ")
+        return [sleep, water, food, steps, exercise, input.exposures.isEmpty ? nil : input.exposures.detail].compactMap { $0 }.joined(separator: " · ")
     }
 
     private static func roast(
@@ -159,6 +161,9 @@ enum DailySummaryCalculator {
         intensity: RoastIntensity,
         foodRoastsEnabled: Bool
     ) -> String {
+        if !input.exposures.isEmpty {
+            return "\(band.rawValue). \(input.exposures.roast)"
+        }
         let target = roastTarget(
             for: input,
             band: band,

@@ -300,6 +300,7 @@ struct TodayView: View {
             steps: stepCount,
             exerciseMinutes: exerciseSummary.scoredMinutes,
             exerciseEntryCount: exerciseSummary.entryCount,
+            exposures: ExposureSummary(entries: today?.exposureEntries ?? []),
             foodCoverage: today?.foodScoreAggregate
         )
     }

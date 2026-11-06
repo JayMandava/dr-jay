@@ -46,6 +46,7 @@ struct BrainDumpView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var messages: [BrainDumpMessage] = []
     @State private var draft = ""
+    @State private var hiddenLog: ExposureKind?
     @State private var isResponding = false
     @State private var showsUrgentSupport = false
     @State private var generationTask: Task<Void, Never>?
@@ -112,6 +113,9 @@ struct BrainDumpView: View {
                     privacyCover
                 }
             }
+        }
+        .sheet(item: $hiddenLog) { kind in
+            HiddenExposureSheet(initialKind: kind)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
@@ -251,6 +255,13 @@ struct BrainDumpView: View {
         let text = trimmedDraft
         guard !text.isEmpty, !isResponding else { return }
 
+        if let kind = HiddenLogCommand.match(text) {
+            draft = ""
+            composerFocused = false
+            hiddenLog = kind
+            Haptics.tap()
+            return
+        }
         Haptics.tap()
         let userMessage = BrainDumpMessage(role: .user, text: text)
         messages.append(userMessage)

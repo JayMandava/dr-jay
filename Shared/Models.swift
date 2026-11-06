@@ -193,6 +193,8 @@ final class DailyLog {
     var exerciseEntries: [ExerciseEntry]?
     /// Optional so pre-Presence stores can migrate without synthesized history.
     var presenceEntries: [PresenceEntry]?
+    /// Optional keeps stores from before hidden exposure tracking migratable.
+    var exposureEntries: [ExposureEntry]?
 
     init(dayKey: String, date: Date, waterGoalBottles: Int) {
         self.dayKey = dayKey
@@ -210,6 +212,7 @@ final class DailyLog {
         self.foodScoreVersion = FoodScoreCalculator.version
         self.exerciseEntries = []
         self.presenceEntries = []
+        self.exposureEntries = []
     }
 
     /// Coverage and score are derived, not an additional persisted source of truth.
