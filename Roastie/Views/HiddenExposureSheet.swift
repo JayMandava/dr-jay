@@ -30,109 +30,131 @@ struct HiddenExposureSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label("The unofficial case file", systemImage: "eye.slash")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Off the record? Nice try.", systemImage: "eye.slash")
                             .font(.headline)
                         Text("You found the cupboard. Dr Jay found the receipts.")
                             .font(.subheadline)
-                        Text("Saved to daily logs and backups. Closing Brain Dump does not erase these entries. Score effects also appear in reports and notifications.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }.ledgerCard()
+                    }
+
+                    Picker("Kind", selection: $kind) {
+                        ForEach(ExposureKind.allCases) { item in
+                            Label(item.label, systemImage: item.symbol).tag(item)
+                        }
+                    }.pickerStyle(.segmented)
+
+                    Text(kind == .alcohol
+                         ? "One UK unit is 10 ml of pure alcohol: volume in ml × strength (ABV %) ÷ 1,000. Spirits, beer and wine all count. For example, 25 ml of spirits at 40% is 1 unit, and 500 ml of beer at 5% is 2.5 units. Log from 0.5 units."
+                         : "Count each cigarette, rounding partial ones up. Vaping and other tobacco products aren’t counted. Even one is harmful.")
+                        .font(.caption).foregroundStyle(.secondary)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Picker("Kind", selection: $kind) {
-                            ForEach(ExposureKind.allCases) { item in
-                                Label(item.label, systemImage: item.symbol).tag(item)
-                            }
-                        }.pickerStyle(.segmented)
-                        Text(kind == .alcohol ? "One UK unit = 10ml pure alcohol: volume in ml × ABV% ÷ 1,000. A 25ml spirit at 40% is 1 unit; 500ml beer at 5% is 2.5 units. Log fractional units from 0.5; use the formula for your pour. A glass is not a unit." : "Count cigarettes, including partial cigarettes rounded up. This counter does not measure vaping or other tobacco products. Even one is harmful.")
-                            .font(.caption).foregroundStyle(.secondary)
                         HStack {
-                            Text(kind.unit)
+                            Text(kind.unit.prefix(1).uppercased() + kind.unit.dropFirst())
                             Spacer()
-                            TextField(kind == .alcohol ? "0.5–1000" : "1–1000", text: $quantity)
+                            TextField(kind == .alcohol ? "0.5–1,000" : "1–1,000", text: $quantity)
                                 .keyboardType(.decimalPad)
                                 .focused($quantityFocused)
                                 .multilineTextAlignment(.trailing)
                                 .frame(maxWidth: 100)
                                 .accessibilityLabel(kind.unit)
                         }
+                        if editing == nil {
+                            DatePicker("Day", selection: $date, in: ...Date(), displayedComponents: .date)
+                            Text("Pick an earlier day to review, correct or delete its entries.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        } else {
+                            Text("Correcting an entry for \(date.formatted(date: .abbreviated, time: .omitted)).")
+                                .font(.caption).foregroundStyle(.secondary)
+                            Button("Cancel Correction") { resetEditor() }
+                                .buttonStyle(.bordered)
+                                .font(.subheadline.weight(.semibold))
+                        }
+                    }
+                    .ledgerField()
+
+                    VStack(alignment: .leading, spacing: 8) {
                         TextField("Optional note", text: $note, axis: .vertical)
-                            .lineLimit(1...3)
+                            .lineLimit(2...4)
                             .onChange(of: note) { _, value in
                                 if value.count > 500 { note = String(value.prefix(500)) }
                             }
-                        if editing == nil {
-                            DatePicker("Day", selection: $date, in: ...Date(), displayedComponents: .date)
-                        } else {
-                            Text("Correcting an entry for \(date.formatted(date: .abbreviated, time: .omitted)).")
-                                .font(.caption)
-                        }
-                        Button(editing == nil ? "File the evidence" : "Save correction") { save() }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(count == nil || busy)
-                        if editing != nil {
-                            Button("Cancel correction") { resetEditor() }
-                        }
-                    }.ledgerCard()
+                        Text("\(note.count)/500")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    .ledgerField()
 
                     VStack(alignment: .leading, spacing: 10) {
                         Text("No diplomatic immunity").font(.headline)
                         if summary.isEmpty {
                             Text("No entries for this day. The cupboard can stay closed.")
+                                .font(.subheadline)
                         } else {
-                            Text(summary.detail).font(.subheadline.weight(.semibold))
+                            Text(summary.detail.replacingOccurrences(of: "Score −", with: "Score\u{00A0}−"))
+                                .font(.subheadline.weight(.semibold))
                             Text(summary.roast).font(.subheadline)
                         }
-                        Text("Alcohol costs 8 points per UK unit, plus 12 extra per unit above 2 in a day. Smoke costs 20 points per cigarette from the first. The alcohol deduction rounds to the nearest point. Combined deduction caps at 100; score floors at 0. Two units is an escalation trigger, not a safe allowance. No amount is risk-free. This is an accountability policy, not a clinical risk score. Roast: always high here.")
+                        Text("Alcohol costs 8 points per UK unit, plus 12 more for each unit above 2 in a day. Each cigarette costs 20 points. Deductions total at most 100, and the score never drops below 0. Two units is a warning threshold, not a safe allowance, and no amount of alcohol or tobacco is risk-free. This is an accountability score, not a medical one.")
                             .font(.caption).foregroundStyle(.secondary)
                     }.ledgerCard()
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Receipts · \(date.formatted(date: .abbreviated, time: .omitted))").font(.headline)
-                        ForEach(entries.sorted { $0.timestamp > $1.timestamp }) { entry in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Label("\(entry.quantity.formatted(.number.precision(.fractionLength(0...3)))) \(entry.kind.unit)", systemImage: entry.kind.symbol)
-                                    .font(.subheadline.weight(.medium))
-                                if let note = entry.note, !note.isEmpty {
-                                    Text(note).font(.caption).foregroundStyle(.secondary)
-                                }
-                                HStack {
-                                    Button("Correct") {
-                                        editing = entry
-                                        kind = entry.kind
-                                        quantity = String(entry.quantity)
-                                        note = entry.note ?? ""
+                    if !entries.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Receipts · \(date.formatted(date: .abbreviated, time: .omitted))").font(.headline)
+                            ForEach(entries.sorted { $0.timestamp > $1.timestamp }) { entry in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Label("\(entry.quantity.formatted(.number.precision(.fractionLength(0...3)))) \(entry.kind.unit(for: entry.quantity))", systemImage: entry.kind.symbol)
+                                        .font(.subheadline.weight(.medium))
+                                    if let note = entry.note, !note.isEmpty {
+                                        Text(note).font(.caption).foregroundStyle(.secondary)
                                     }
-                                    Spacer()
-                                    Button("Delete", role: .destructive) { delete(entry) }
-                                }.font(.caption)
+                                    HStack {
+                                        Button("Correct") {
+                                            editing = entry
+                                            kind = entry.kind
+                                            quantity = String(entry.quantity)
+                                            note = entry.note ?? ""
+                                        }
+                                        Spacer()
+                                        Button("Delete", role: .destructive) { delete(entry) }
+                                    }.font(.caption)
+                                }
+                                .disabled(busy)
+                                Divider()
                             }
-                            .disabled(busy)
-                            Divider()
-                        }
-                        if entries.isEmpty { Text("No receipts.").foregroundStyle(.secondary) }
-                        Text("Choose any past day above to correct or delete its entries. Zero means no entry; delete an incorrect receipt rather than logging zero.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }.ledgerCard()
+                            Text("To remove a mistake, delete the entry instead of logging zero.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }.ledgerCard()
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
             }
             .scrollDismissesKeyboard(.interactively)
             .background(DrJayTheme.canvas.ignoresSafeArea())
-            .navigationTitle("Off the record? Nice try.")
+            .navigationTitle("Log \(kind.label)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("Done") { quantityFocused = false }
                 }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .disabled(busy)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                        .fontWeight(.semibold)
+                        .disabled(count == nil || busy)
+                }
             }
-            .alert("Couldn’t save the receipt", isPresented: $saveError) {
+            .alert("Couldn’t save entry", isPresented: $saveError) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Use 0.5–1,000 alcohol units or 1–1,000 whole cigarettes and a day up to today, then try again.")
+                Text("Use 0.5–1,000 alcohol units or 1–1,000 whole cigarettes, with a day up to today, then try again.")
             }
             .onAppear { kind = initialKind }
             .tint(DrJayTheme.primary)
@@ -149,7 +171,7 @@ struct HiddenExposureSheet: View {
             }
         }
         .privacySensitive()
-        .presentationDetents([.large])
+        .presentationDetents([.medium, .large])
     }
 
     private func save() {
@@ -164,6 +186,7 @@ struct HiddenExposureSheet: View {
             if await DayCoordinator.shared.saveExposure(entry, dayKey: key) {
                 resetEditor()
                 Haptics.tap()
+                dismiss()
             } else { saveError = true }
             busy = false
         }
@@ -193,5 +216,15 @@ private extension View {
         frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
             .clinicalCard()
+    }
+
+    /// Same field surface as the Presence sheet.
+    func ledgerField() -> some View {
+        padding(16)
+            .background(DrJayTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(DrJayTheme.outline.opacity(0.7), lineWidth: 0.5)
+            }
     }
 }

@@ -18,6 +18,10 @@ enum ExposureKind: String, Codable, CaseIterable, Identifiable, Sendable {
     var label: String { self == .alcohol ? "Spirits" : "Smoke" }
     var symbol: String { self == .alcohol ? "wineglass" : "smoke" }
     var unit: String { self == .alcohol ? "UK alcohol units" : "cigarettes" }
+    func unit(for quantity: Double) -> String {
+        guard quantity == 1 else { return unit }
+        return self == .alcohol ? "UK alcohol unit" : "cigarette"
+    }
 }
 
 struct ExposureEntry: Codable, Hashable, Identifiable, Sendable {
@@ -81,7 +85,7 @@ struct ExposureSummary: Equatable, Sendable {
     }
 
     var detail: String {
-        "Alcohol \(alcoholUnits.formatted(.number.precision(.fractionLength(0...3)))) UK units · Smoke \(cigarettes) · Score −\(penalty)"
+        "Alcohol \(alcoholUnits.formatted(.number.precision(.fractionLength(0...3)))) UK \(alcoholUnits == 1 ? "unit" : "units") · Smoke \(cigarettes) \(cigarettes == 1 ? "cigarette" : "cigarettes") · Score −\(penalty)"
     }
 
     /// Always the strongest local feedback; never changes the user's other roast settings.
