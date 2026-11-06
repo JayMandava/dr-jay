@@ -78,6 +78,37 @@ final class ExposureTests: XCTestCase {
         XCTAssertTrue(report.contains("not a medical risk score"))
     }
 
+    func testLedgerMutationInvalidatesOnlySelectedDaysPendingAndDeliveredSummary() {
+        let dayKey = "2026-11-06"
+        let selectedID = "daily.summary.2026-11-06"
+        let otherIDs: Set<String> = ["daily.summary.2026-11-05", "daily.summary.2026-11-07",
+                                     "sleep.night.2026-11-06", "water.night.2026-11-06",
+                                     "backup.expiry.reminder"]
+        var pending = otherIDs.union([selectedID])
+        var delivered = otherIDs.union([selectedID])
+        var pendingIDs: [String] = []
+        var deliveredIDs: [String] = []
+        NotificationManager.invalidateDailySummary(for: dayKey, removePending: { identifiers in
+            pendingIDs = identifiers
+            pending.subtract(identifiers)
+        }, removeDelivered: { identifiers in
+            deliveredIDs = identifiers
+            delivered.subtract(identifiers)
+        })
+        XCTAssertEqual(NotificationManager.dailySummaryIdentifier(for: dayKey), selectedID)
+        XCTAssertEqual(pendingIDs, [selectedID])
+        XCTAssertEqual(deliveredIDs, [selectedID])
+        XCTAssertEqual(pending, otherIDs)
+        XCTAssertEqual(delivered, otherIDs)
+        // Historical corrections target only that historical day's notification, too.
+        NotificationManager.invalidateDailySummary(for: "2026-11-05", removePending: { pending.subtract($0) },
+                                                    removeDelivered: { delivered.subtract($0) })
+        XCTAssertFalse(delivered.contains("daily.summary.2026-11-05"))
+        XCTAssertFalse(pending.contains("daily.summary.2026-11-05"))
+        XCTAssertTrue(delivered.contains("water.night.2026-11-06"))
+        XCTAssertTrue(pending.contains("daily.summary.2026-11-07"))
+    }
+
     func testModelVariationPromptsContainOnlyFixedAppAuthoredCues() {
         for angle in DailyReportPrompt.ComicAngle.allCases {
             XCTAssertEqual(DailyReportPrompt.variation(angle: angle),

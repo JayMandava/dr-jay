@@ -358,6 +358,7 @@ final class DayCoordinator {
             PersistenceController.excludeStoreFilesFromBackup()
             // Refresh the sensitive backup before any suspension in notification/Health work.
             persistBackup()
+            NotificationManager.invalidateDailySummary(for: dayKey)
             if dayKey == Date().dayKey { await pushSnapshot(log: log, settings: SharedStore.loadSettings()) }
             return true
         } catch {
@@ -371,6 +372,7 @@ final class DayCoordinator {
         do {
             guard let log = try ExposureLogStore.delete(id: id, dayKey: dayKey, context: context) else { return false }
             persistBackup()
+            NotificationManager.invalidateDailySummary(for: dayKey)
             if dayKey == Date().dayKey { await pushSnapshot(log: log, settings: SharedStore.loadSettings()) }
             return true
         } catch {
