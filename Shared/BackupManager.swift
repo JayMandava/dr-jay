@@ -10,7 +10,7 @@ import Foundation
 /// reinstall, a new device, or just wanting your history in a plain file.
 enum BackupManager {
     private static let fileName = "dr-jay-backup.json"
-    private static let currentVersion = 8
+    private static let currentVersion = 9
 
     enum BackupError: LocalizedError {
         case unsupportedVersion(Int)
@@ -43,6 +43,7 @@ enum BackupManager {
         var exerciseEntries: [ExerciseEntry]?
         /// Missing in versions 1–7; no Presence history is inferred.
         var presenceEntries: [PresenceEntry]? = nil
+        var exposureEntries: [ExposureEntry]? = nil
     }
 
     struct BackupPayload: Codable, Equatable {
@@ -86,7 +87,8 @@ enum BackupManager {
                     foodScoreIsCurrent: $0.foodScoreIsCurrent,
                     foodScoreVersion: $0.foodScoreVersion,
                     exerciseEntries: $0.exerciseEntries,
-                    presenceEntries: $0.presenceEntries
+                    presenceEntries: $0.presenceEntries,
+                    exposureEntries: $0.exposureEntries
                 )
             },
             foodCorrectionMemories: foodCorrectionMemories
@@ -130,5 +132,6 @@ enum BackupManager {
         log.foodScoreVersion = entry.foodScoreVersion
         log.exerciseEntries = entry.exerciseEntries ?? []
         log.presenceEntries = entry.presenceEntries ?? []
+        log.exposureEntries = entry.exposureEntries ?? []
     }
 }

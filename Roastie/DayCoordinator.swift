@@ -350,6 +350,34 @@ final class DayCoordinator {
         return true
     }
 
+    @discardableResult
+    func saveExposure(_ entry: ExposureEntry, dayKey: String) async -> Bool {
+        do {
+            let log = try ExposureLogStore.save(entry, dayKey: dayKey, context: context,
+                                                waterGoal: SharedStore.loadSettings().waterGoalBottles)
+            PersistenceController.excludeStoreFilesFromBackup()
+            if dayKey == Date().dayKey { await pushSnapshot(log: log, settings: SharedStore.loadSettings()) }
+            persistBackup()
+            return true
+        } catch {
+            AppLogger.report(error, operation: "Save exposure entry", logger: AppLogger.persistence)
+            return false
+        }
+    }
+
+    @discardableResult
+    func deleteExposure(id: UUID, dayKey: String) async -> Bool {
+        do {
+            guard let log = try ExposureLogStore.delete(id: id, dayKey: dayKey, context: context) else { return false }
+            if dayKey == Date().dayKey { await pushSnapshot(log: log, settings: SharedStore.loadSettings()) }
+            persistBackup()
+            return true
+        } catch {
+            AppLogger.report(error, operation: "Delete exposure entry", logger: AppLogger.persistence)
+            return false
+        }
+    }
+
     func forgetFoodCorrectionMemory(id: UUID) {
         var memories = SharedStore.loadFoodCorrectionMemories()
         memories.removeAll { $0.id == id }
@@ -676,7 +704,8 @@ final class DayCoordinator {
             foodScore: log.foodScore,
             steps: steps,
             exerciseMinutes: ExerciseAnalyzer.summary(entries: log.exerciseEntries ?? []).scoredMinutes,
-            exerciseEntryCount: (log.exerciseEntries ?? []).count
+            exerciseEntryCount: (log.exerciseEntries ?? []).count,
+            exposures: ExposureSummary(entries: log.exposureEntries ?? [])
         )
         await NotificationManager.rescheduleAll(
             settings: settings,

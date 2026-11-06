@@ -15,6 +15,13 @@ enum DailyReportGenerator {
         previousCommentary: String? = nil
     ) async -> String {
         let facts = narrativeFacts(input: input, result: result)
+        if !input.exposures.isEmpty {
+            return compose(
+                facts: (facts.verdict + " " + input.exposures.detail + ".",
+                        "Do not add more alcohol or cigarettes. No amount is risk-free; these points are an app policy, not a medical risk score."),
+                roast: input.exposures.roast
+            )
+        }
         let target = roastTarget(
             input: input,
             result: result,

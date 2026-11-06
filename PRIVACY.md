@@ -1,10 +1,10 @@
 # Dr Jay Privacy Policy
 
-Effective October 15, 2026. Dr Jay is developed by Jeyanth Mandava. This policy covers the iPhone app, its widgets, Live Activities, and optional on-device models.
+Effective November 6, 2026. Dr Jay is developed by Jeyanth Mandava. This policy covers the iPhone app, its widgets, Live Activities, and optional on-device models.
 
 ## Your entries stay local
 
-Dr Jay has no account system, advertising, tracking, or developer-operated analytics service. Sleep and water logs, food descriptions and assessments, exercise entries, Presence entries and optional notes, learned food corrections, check-in messages, and settings are stored on your device. The app and widgets share local storage so logging actions and displayed progress agree.
+Dr Jay has no account system, advertising, tracking, or developer-operated analytics service. Sleep and water logs, food descriptions and assessments, exercise entries, alcohol and cigarette entries, Presence entries and optional notes, learned food corrections, check-in messages, and settings are stored on your device. The app and widgets share local storage so logging actions and displayed progress agree.
 
 Presence is optional. Its categories, minutes, dates, and notes persist in history and JSON backups, unlike ephemeral Brain Dump conversations. Presence summaries are descriptive, do not score relationships, and do not affect daily scores or streaks. Presence commentary uses a fixed local Gentle phrase bank; notes are not sent to a model. Entries can be deleted individually from History.
 
@@ -19,6 +19,8 @@ You can stop sleep syncing in Settings. To revoke Health permissions, use the He
 ## Brain Dump
 
 Brain Dump messages and responses exist only in memory for the open conversation. Closing the pane discards them. They are not saved to history, logged by Dr Jay, exported, or used to train a model. The pane obscures its contents when the app becomes inactive. This is not a guarantee against screenshots you take or records created outside the app.
+
+Hidden alcohol and cigarette logging is separate from the temporary conversation. Entries explicitly saved there persist in daily logs and JSON backups and affect daily scores and report/notification commentary. They can be corrected or deleted from that hidden ledger by selecting the day. The ledger uses fixed local feedback and does not send these entries to a model.
 
 ## Downloads and external links
 

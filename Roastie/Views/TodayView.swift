@@ -299,7 +299,8 @@ struct TodayView: View {
             foodScore: today?.foodScoreIsCurrent == true ? today?.foodScore : nil,
             steps: stepCount,
             exerciseMinutes: exerciseSummary.scoredMinutes,
-            exerciseEntryCount: exerciseSummary.entryCount
+            exerciseEntryCount: exerciseSummary.entryCount,
+            exposures: ExposureSummary(entries: today?.exposureEntries ?? [])
         )
     }
 
