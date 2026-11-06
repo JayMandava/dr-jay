@@ -147,6 +147,33 @@ final class DailySummaryCalculatorTests: XCTestCase {
         XCTAssertFalse(result.roast.localizedCaseInsensitiveContains("plate"))
     }
 
+    func testPartialFoodContributesWithoutMarkingOverallComplete() {
+        var value = input(sleep: 7, water: 4, goal: 4, food: 60, steps: 8_000)
+        value.foodCoverage = FoodScoreAggregate(
+            score: 60, assessedEntryCount: 2, totalEntryCount: 3,
+            unresolvedEntryIDs: [UUID()]
+        )
+        let result = DailySummaryCalculator.calculate(value)
+        XCTAssertEqual(result.score, 88)
+        XCTAssertFalse(result.isComplete)
+        XCTAssertTrue(result.detail.contains("partial estimate"))
+        XCTAssertTrue(result.detail.contains("2 of 3 entries assessed"))
+        XCTAssertEqual(result.weightBreakdown.first { $0.metric == .food }?.effectiveWeight ?? 0,
+                       0.30, accuracy: 0.001)
+    }
+
+    func testUnresolvedOnlyFoodIsUnavailableNotZero() {
+        var value = input(sleep: 7, water: 4, goal: 4, food: nil, steps: 8_000)
+        value.foodCoverage = FoodScoreAggregate(
+            score: nil, assessedEntryCount: 0, totalEntryCount: 1,
+            unresolvedEntryIDs: [UUID()]
+        )
+        let result = DailySummaryCalculator.calculate(value)
+        XCTAssertFalse(result.isComplete)
+        XCTAssertNil(result.weightBreakdown.first { $0.metric == .food }?.effectiveWeight)
+        XCTAssertTrue(result.detail.contains("0 of 1 entries assessed"))
+    }
+
     private func input(
         sleep: Double?,
         water: Int,
@@ -167,3 +194,4 @@ final class DailySummaryCalculatorTests: XCTestCase {
         )
     }
 }
+

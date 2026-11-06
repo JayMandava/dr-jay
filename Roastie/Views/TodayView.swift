@@ -98,7 +98,7 @@ struct TodayView: View {
                     }
 
                     FoodScoreCard(
-                        score: today?.foodScore,
+                        aggregate: today?.foodScoreAggregate ?? FoodScoreCalculator.aggregate(entries: []),
                         summary: today?.foodScoreSummary,
                         isCurrent: today?.foodScoreIsCurrent == true,
                         hasEntries: !(today?.foodEntries ?? []).isEmpty,
@@ -296,11 +296,12 @@ struct TodayView: View {
             sleepHours: today?.sleepHours,
             waterBottlesLogged: today?.waterBottlesLogged ?? 0,
             waterGoalBottles: today?.waterGoalBottles ?? settings.waterGoalBottles,
-            foodScore: today?.foodScoreIsCurrent == true ? today?.foodScore : nil,
+            foodScore: today?.foodScoreAggregate.score,
             steps: stepCount,
             exerciseMinutes: exerciseSummary.scoredMinutes,
             exerciseEntryCount: exerciseSummary.entryCount,
-            exposures: ExposureSummary(entries: today?.exposureEntries ?? [])
+            exposures: ExposureSummary(entries: today?.exposureEntries ?? []),
+            foodCoverage: today?.foodScoreAggregate
         )
     }
 
@@ -319,7 +320,7 @@ struct TodayView: View {
             foodRoastsEnabled: settings.foodRoastsEnabled
         )
         reportResult = result
-        reportCommentary = await DailyReportGenerator.generate(
+        let commentary = await DailyReportGenerator.generate(
             input: input,
             result: result,
             intensity: settings.roastIntensity,
@@ -327,6 +328,14 @@ struct TodayView: View {
             provider: commentaryModels.selectedProvider,
             previousCommentary: previousCommentary
         )
+        // Food can be logged/corrected while model commentary is suspended.
+        // Keep current deterministic data instead of presenting stale completeness.
+        guard input == dailySummaryInput else {
+            reportResult = dailySummary
+            isGeneratingReport = false
+            return
+        }
+        reportCommentary = commentary
         isGeneratingReport = false
     }
 
@@ -382,10 +391,9 @@ struct TodayView: View {
         guard let entry = loggedFoodResult else { return }
         loggedFoodResult = nil
 
-        guard settings.foodRoastsEnabled else { return }
-
         switch entry.verdict {
         case .unhealthy:
+            guard settings.foodRoastsEnabled else { return }
             foodFeedback = FoodFeedback(
                 title: "Dr Jay’s diagnosis",
                 message: entry.roast ?? "The chart says unhealthy. Even without commentary, the evidence is unflattering."
@@ -393,7 +401,7 @@ struct TodayView: View {
         case .unanalyzed:
             foodFeedback = FoodFeedback(
                 title: "Food logged",
-                message: "Dr Jay couldn’t analyse this entry on this device. You can classify it from History."
+                message: "This entry is safely logged but couldn’t be analysed. It is excluded from the food estimate; other assessed entries still count. You can review and classify it in History."
             )
         case .healthy:
             break
@@ -644,7 +652,8 @@ private struct FoodFeedback: Identifiable {
 }
 
 private struct FoodScoreCard: View {
-    let score: Int?
+    let aggregate: FoodScoreAggregate
+    private var score: Int? { aggregate.score }
     let summary: String?
     let isCurrent: Bool
     let hasEntries: Bool
@@ -695,11 +704,17 @@ private struct FoodScoreCard: View {
                             ProgressView()
                                 .controlSize(.small)
                         }
-                        Text(isCurrent ? "Score unavailable" : "Calculating score…")
+                        Text(isCurrent ? "Logged · Needs review" : "Assessing food…")
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                Text(aggregate.isPartial
+                    ? "Partial estimate · \(aggregate.coverageDescription)"
+                    : aggregate.coverageDescription)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 if let presentedSummary {
                     Divider()
@@ -750,7 +765,7 @@ private struct FoodScoreCard: View {
     }
 
     private var presentedSummary: String? {
-        guard let summary else { return nil }
+        guard aggregate.isComplete, isCurrent, let summary else { return nil }
         var result = summary.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !result.isEmpty else { return nil }
 
@@ -837,3 +852,4 @@ private struct CheckInTimeline: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
+

@@ -54,15 +54,13 @@ enum SleepDurationOption: String, AppEnum {
 
 struct LogWaterIntent: AppIntent {
     static let title: LocalizedStringResource = "Log a Bottle of Water"
-    static let description = IntentDescription("Logs one finished bottle of water in Roastie.")
+    static let description = IntentDescription("Logs one finished bottle of water in Dr Jay.")
     static let openAppWhenRun: Bool = false
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        await DayCoordinator.shared.logWaterBottle()
-        let snapshot = SharedStore.loadSnapshot()
-        let progress = snapshot.map { "\($0.waterBottlesLogged) of \($0.waterGoalBottles) bottles today." } ?? "Logged."
-        return .result(dialog: IntentDialog(stringLiteral: "Bottle logged. \(progress)"))
+        let receipt = try DayCoordinator.shared.logWithSiri(.water)
+        return .result(dialog: IntentDialog(stringLiteral: receipt.dialog))
     }
 }
 
@@ -80,8 +78,8 @@ struct ConfirmSleepIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        await DayCoordinator.shared.recordSleepSelfReport(met: metGoal)
-        return .result(dialog: metGoal ? "Nice, logged as a win." : "Logged. Get some rest tonight.")
+        let receipt = try DayCoordinator.shared.logWithSiri(.confirmSleep(met: metGoal))
+        return .result(dialog: IntentDialog(stringLiteral: receipt.dialog))
     }
 }
 
@@ -104,42 +102,28 @@ struct LogSleepDurationIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        await DayCoordinator.shared.logSleepHours(duration.hours)
-        let snapshot = SharedStore.loadSnapshot()
-        let total = snapshot?.sleepHours.map { String(format: "%.1f", $0) }
-        let dialog = total.map { "Logged. \($0) hours total today." } ?? "Logged."
-        return .result(dialog: IntentDialog(stringLiteral: dialog))
+        let receipt = try DayCoordinator.shared.logWithSiri(.sleep(hours: duration.hours))
+        return .result(dialog: IntentDialog(stringLiteral: receipt.dialog))
     }
 }
 
 struct HydrationStatusIntent: AppIntent {
     static let title: LocalizedStringResource = "Check Water Progress"
-    static let description = IntentDescription("Reports today's water progress in Roastie.")
+    static let description = IntentDescription("Reports today's water progress in Dr Jay.")
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let snapshot = SharedStore.loadSnapshot()
-        guard let snapshot else {
-            return .result(dialog: "No data yet today — log a bottle to get started.")
-        }
-        let dialog = "You're at \(snapshot.waterBottlesLogged) of \(snapshot.waterGoalBottles) bottles today."
-        return .result(dialog: IntentDialog(stringLiteral: dialog))
+        return .result(dialog: IntentDialog(stringLiteral: try DayCoordinator.shared.siriWaterStatus()))
     }
 }
 
 struct SleepStatusIntent: AppIntent {
     static let title: LocalizedStringResource = "Check Sleep Status"
-    static let description = IntentDescription("Reports whether last night's sleep goal was met in Roastie.")
+    static let description = IntentDescription("Reports whether last night's sleep goal was met in Dr Jay.")
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let snapshot = SharedStore.loadSnapshot()
-        guard let snapshot, let hours = snapshot.sleepHours else {
-            return .result(dialog: "No sleep data yet today.")
-        }
-        let met = snapshot.sleepGoalMet == true
-        let dialog = "You slept \(String(format: "%.1f", hours)) hours — goal \(met ? "met" : "missed")."
-        return .result(dialog: IntentDialog(stringLiteral: dialog))
+        return .result(dialog: IntentDialog(stringLiteral: try DayCoordinator.shared.siriSleepStatus()))
     }
 }
 
@@ -206,3 +190,4 @@ struct RoastieShortcuts: AppShortcutsProvider {
         )
     }
 }
+

@@ -208,8 +208,21 @@ enum LongitudinalInsightsCalculator {
     ) -> InsightMetric {
         let values = current.compactMap(\.foodScore)
         let previousValues = previous.compactMap(\.foodScore)
+        let partialDays = current.filter(\.foodIsPartial).count
+        let unresolvedEntries = current.reduce(0) { $0 + $1.unresolvedFoodEntryCount }
+        var coverage: [String] = []
+        if partialDays > 0 {
+            coverage.append("\(partialDays) partial day\(partialDays == 1 ? "" : "s") excluded")
+        }
+        if unresolvedEntries > 0 {
+            coverage.append("\(unresolvedEntries) food entr\(unresolvedEntries == 1 ? "y needs" : "ies need") review")
+        }
+        let coverageDetail = coverage.isEmpty ? "" : " · " + coverage.joined(separator: " · ")
         guard !values.isEmpty else {
-            return unavailableMetric(id: "food", title: "Food", detail: "No current food scores in this window")
+            return unavailableMetric(
+                id: "food", title: "Food",
+                detail: "No fully assessed food days in this window" + coverageDetail
+            )
         }
         let score = average(values.map(Double.init))
         let previousScore = previousValues.isEmpty ? nil : average(previousValues.map(Double.init))
@@ -220,7 +233,7 @@ enum LongitudinalInsightsCalculator {
             id: "food",
             title: "Food",
             value: "\(Int(score.rounded()))",
-            detail: "Average across \(values.count) scored day\(values.count == 1 ? "" : "s")",
+            detail: "Average across \(values.count) fully assessed day\(values.count == 1 ? "" : "s")" + coverageDetail,
             score: score,
             direction: direction(current: score, previous: previousScore, enabled: hasMetricComparison)
         )
@@ -346,6 +359,8 @@ enum LongitudinalInsightsCalculator {
         let sleepHours: Double?
         let waterPercent: Double
         let foodScore: Int?
+        let foodIsPartial: Bool
+        let unresolvedFoodEntryCount: Int
         let exposure: Exposure?
         let exposureIsComplete: Bool
         let hasCaffeineAfterFourPM: Bool
@@ -361,7 +376,12 @@ enum LongitudinalInsightsCalculator {
                 100,
                 Double(max(0, log.waterBottlesLogged)) / Double(max(1, log.waterGoalBottles)) * 100
             )
-            foodScore = log.foodScoreIsCurrent == false ? nil : log.foodScore
+            // Comparable food trends use only fully assessed days. Derive coverage
+            // from persisted entries, not the v2 all-or-nothing score cache.
+            let aggregate = log.foodScoreAggregate
+            foodScore = aggregate.isComplete ? aggregate.score : nil
+            foodIsPartial = aggregate.isPartial
+            unresolvedFoodEntryCount = aggregate.unresolvedEntryIDs.count
 
             let entries = log.foodEntries ?? []
             let totals = FoodExposureCalculator.totals(entries: entries)
@@ -382,3 +402,4 @@ enum LongitudinalInsightsCalculator {
         }
     }
 }
+
