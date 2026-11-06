@@ -274,26 +274,33 @@ final class ExposureTests: XCTestCase {
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         for kind in ExposureKind.allCases {
-            let window = UIWindow(windowScene: scene)
-            window.frame = scene.coordinateSpace.bounds
-            window.windowLevel = .normal + 1
-            let host = UIHostingController(rootView: HiddenExposureSheet(initialKind: kind).modelContainer(container))
-            window.rootViewController = host
-            window.makeKeyAndVisible()
-            try await Task.sleep(for: .seconds(1))
-            XCTAssertGreaterThan(host.view.bounds.width, 0)
-            let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
-                window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+            // A hosted test window does not reliably inherit the app's active phase.
+            // Exercise the content and the privacy cover explicitly as separate fixtures.
+            for (phaseName, phase) in [("active", ScenePhase.active), ("inactive", ScenePhase.inactive)] {
+                let window = UIWindow(windowScene: scene)
+                window.frame = scene.coordinateSpace.bounds
+                window.windowLevel = .normal + 1
+                let host = UIHostingController(rootView: HiddenExposureSheet(initialKind: kind)
+                    .modelContainer(container)
+                    .environment(\.scenePhase, phase))
+                window.rootViewController = host
+                window.makeKeyAndVisible()
+                try await Task.sleep(for: .seconds(1))
+                XCTAssertGreaterThan(host.view.bounds.width, 0)
+                let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+                    window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+                }
+                let name = "hidden-ledger-\(kind.rawValue)-\(phaseName)"
+                let attachment = XCTAttachment(image: image)
+                attachment.name = name
+                attachment.lifetime = .keepAlways
+                add(attachment)
+                let url = FileManager.default.temporaryDirectory.appending(path: "\(name).png")
+                try image.pngData()?.write(to: url)
+                print("HIDDEN_LEDGER_IMAGE \(url.path)")
+                window.isHidden = true
+                window.rootViewController = nil
             }
-            let attachment = XCTAttachment(image: image)
-            attachment.name = "hidden-ledger-\(kind.rawValue)"
-            attachment.lifetime = .keepAlways
-            add(attachment)
-            let url = FileManager.default.temporaryDirectory.appending(path: "hidden-ledger-\(kind.rawValue).png")
-            try image.pngData()?.write(to: url)
-            print("HIDDEN_LEDGER_IMAGE \(url.path)")
-            window.isHidden = true
-            window.rootViewController = nil
         }
     }
 
