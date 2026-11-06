@@ -33,16 +33,14 @@ enum DailyReportGenerator {
         case .gemma:
             generated = await generateWithGemma(
                 target: target,
-                intensity: intensity,
-                previousCommentary: previousCommentary
+                intensity: intensity
             )
         case .apple:
             #if canImport(FoundationModels)
             if #available(iOS 26.0, *) {
                 generated = await generateWithApple(
                     target: target,
-                    intensity: intensity,
-                    previousCommentary: previousCommentary
+                    intensity: intensity
                 )
             } else {
                 generated = nil
@@ -75,14 +73,13 @@ enum DailyReportGenerator {
 
     private static func generateWithGemma(
         target: RoastTarget,
-        intensity: RoastIntensity,
-        previousCommentary: String?
+        intensity: RoastIntensity
     ) async -> String? {
         do {
             return try await GemmaBrainDumpService.shared.respond(
                 to: [BrainDumpConversationTurn(
                     role: "user",
-                    text: variationPrompt(previousCommentary: previousCommentary)
+                    text: DailyReportPrompt.variation()
                 )],
                 instructions: RoastStyleContract.modelInstructions(
                     target: target,
@@ -99,8 +96,7 @@ enum DailyReportGenerator {
     @available(iOS 26.0, *)
     private static func generateWithApple(
         target: RoastTarget,
-        intensity: RoastIntensity,
-        previousCommentary: String?
+        intensity: RoastIntensity
     ) async -> String? {
         guard case .available = SystemLanguageModel.default.availability else { return nil }
 
@@ -112,7 +108,7 @@ enum DailyReportGenerator {
         )
         do {
             let response = try await session.respond(
-                to: variationPrompt(previousCommentary: previousCommentary),
+                to: DailyReportPrompt.variation(),
                 generating: GeneratedRoast.self,
                 options: GenerationOptions(temperature: 0.9, maximumResponseTokens: 80)
             )
@@ -130,17 +126,6 @@ enum DailyReportGenerator {
         var roast: String
     }
     #endif
-
-    private static func variationPrompt(previousCommentary: String?) -> String {
-        let previous = previousCommentary ?? "None"
-        let cue = ["bureaucratic failure", "clinical absurdity", "failed competence", "case-file embarrassment"]
-            .randomElement() ?? "clinical absurdity"
-        return """
-        Optional comic angle: \(cue).
-        Previous full commentary, supplied only to prevent repetition: <previous>\(previous)</previous>
-        Write a different roast without reusing its distinctive wording.
-        """
-    }
 
     private static func roastTarget(
         input: DailySummaryInput,

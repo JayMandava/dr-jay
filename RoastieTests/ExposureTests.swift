@@ -78,6 +78,34 @@ final class ExposureTests: XCTestCase {
         XCTAssertTrue(report.contains("not a medical risk score"))
     }
 
+    func testModelVariationPromptsContainOnlyFixedAppAuthoredCues() {
+        for angle in DailyReportPrompt.ComicAngle.allCases {
+            XCTAssertEqual(DailyReportPrompt.variation(angle: angle),
+                           "Optional comic angle: \(angle.rawValue). Write one fresh roast sentence.")
+        }
+    }
+
+    func testDeletedExposureReportIsExcludedFromSubsequentModelPrompts() async {
+        let exposures = ExposureSummary(alcoholUnits: 3, cigarettes: 1)
+        let previousInput = input(exposures)
+        let previousReport = await DailyReportGenerator.generate(
+            input: previousInput, result: DailySummaryCalculator.calculate(previousInput),
+            intensity: .gentle, foodRoastsEnabled: false, provider: .gemma)
+        XCTAssertTrue(previousReport.contains(exposures.detail))
+        let emptyLedger = input()
+        XCTAssertTrue(emptyLedger.exposures.isEmpty)
+        // Both providers use this builder, which deliberately accepts no previous report.
+        // Repetition checks still receive previousReport locally, outside model prompts.
+        for angle in DailyReportPrompt.ComicAngle.allCases {
+            let prompt = DailyReportPrompt.variation(angle: angle)
+            XCTAssertEqual(prompt, "Optional comic angle: \(angle.rawValue). Write one fresh roast sentence.")
+            XCTAssertFalse(prompt.contains(previousReport))
+            XCTAssertFalse(prompt.contains(exposures.detail))
+            XCTAssertFalse(prompt.contains(exposures.roast))
+            XCTAssertFalse(prompt.contains("<previous>"))
+        }
+    }
+
     func testTotalsAreOrderIndependentAndOverflowSafe() {
         let entries = [ExposureEntry(kind: .alcohol, quantity: Double.greatestFiniteMagnitude, timestamp: .now),
                        ExposureEntry(kind: .alcohol, quantity: 1, timestamp: .now),

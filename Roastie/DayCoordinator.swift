@@ -356,8 +356,9 @@ final class DayCoordinator {
             let log = try ExposureLogStore.save(entry, dayKey: dayKey, context: context,
                                                 waterGoal: SharedStore.loadSettings().waterGoalBottles)
             PersistenceController.excludeStoreFilesFromBackup()
-            if dayKey == Date().dayKey { await pushSnapshot(log: log, settings: SharedStore.loadSettings()) }
+            // Refresh the sensitive backup before any suspension in notification/Health work.
             persistBackup()
+            if dayKey == Date().dayKey { await pushSnapshot(log: log, settings: SharedStore.loadSettings()) }
             return true
         } catch {
             AppLogger.report(error, operation: "Save exposure entry", logger: AppLogger.persistence)
@@ -369,8 +370,8 @@ final class DayCoordinator {
     func deleteExposure(id: UUID, dayKey: String) async -> Bool {
         do {
             guard let log = try ExposureLogStore.delete(id: id, dayKey: dayKey, context: context) else { return false }
-            if dayKey == Date().dayKey { await pushSnapshot(log: log, settings: SharedStore.loadSettings()) }
             persistBackup()
+            if dayKey == Date().dayKey { await pushSnapshot(log: log, settings: SharedStore.loadSettings()) }
             return true
         } catch {
             AppLogger.report(error, operation: "Delete exposure entry", logger: AppLogger.persistence)

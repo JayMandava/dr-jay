@@ -5,6 +5,7 @@ import SwiftData
 struct HiddenExposureSheet: View {
     let initialKind: ExposureKind
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
     @State private var kind: ExposureKind = .alcohol
     @State private var quantity = "1"
@@ -135,6 +136,17 @@ struct HiddenExposureSheet: View {
             }
             .onAppear { kind = initialKind }
             .tint(DrJayTheme.primary)
+        }
+        .overlay {
+            if scenePhase != .active {
+                VStack(spacing: 10) {
+                    Image(systemName: "lock.fill").font(.largeTitle)
+                    Text("Case file hidden").font(.headline)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(DrJayTheme.canvas)
+                .ignoresSafeArea()
+            }
         }
         .privacySensitive()
         .presentationDetents([.large])
