@@ -234,18 +234,15 @@ final class DayCoordinator {
             : []
 
         let log = todayLog()
-        var entry = FoodEntry(
-            text: text,
-            timestamp: .now,
-            verdict: .unanalyzed,
-            assessment: nil,
-            roast: nil
-        )
-        var entries = log.foodEntries ?? []
-        entries.append(entry)
-        log.foodEntries = entries
-        invalidateFoodScore(for: log)
-        saveContext(operation: "Log food entry")
+        var entry: FoodEntry
+        do {
+            entry = try FoodEntryPersistence.insert(
+                description: text, in: log,
+                save: { self.saveContext(operation: "Log food entry") }
+            )
+        } catch {
+            return nil
+        }
         persistBackup()
 
         let originalEntry = entry
