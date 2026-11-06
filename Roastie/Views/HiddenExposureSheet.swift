@@ -171,7 +171,7 @@ struct HiddenExposureSheet: View {
             }
         }
         .privacySensitive()
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.fraction(0.92)])
     }
 
     private func save() {
