@@ -554,6 +554,7 @@ private struct DailyReportSheet: View {
                 }
             }
         }
+        .presentationDetents([.fraction(0.92)])
     }
 
     private func bandColor(_ band: DailySummaryBand) -> Color {
