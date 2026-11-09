@@ -55,7 +55,8 @@ struct SettingsView: View {
                 } header: {
                     Text("Surroundings")
                 } footer: {
-                    Text("Off by default. When enabled, tap Check Weather on Today to allow location access. Your approximate area (coordinates rounded to 0.1°) and IP address go to Open-Meteo for local weather. No health logs are sent. Location and weather stay in memory, not history or exports. Optional food and hydration ideas never change your goals or core verdict. Following one can earn a separate +1 bonus per day, with no penalty for skipping. Follow any personal fluid or dietary guidance.")
+                    Text("Off by default. Check Weather on Today shares your approximate location and IP address with Open-Meteo. No health logs are sent. Details in Privacy Policy below.")
+                        .padding(.leading, 8)
                 }
 
                 Section("Apple Health") {
@@ -130,6 +131,7 @@ struct SettingsView: View {
                     Text("Roast intensity")
                 } footer: {
                     Text("Gentle implies. Playful teases. Spicy lands a short, unsparing punchline.")
+                        .padding(.leading, 8)
                 }
 
                 Section {
@@ -138,6 +140,7 @@ struct SettingsView: View {
                     Text("Food feedback")
                 } footer: {
                     Text("Food classifications are on-device estimates. When this is off, food still contributes to the score but receives no roast. Dr Jay never comments on calories, body, or weight.")
+                        .padding(.leading, 8)
                 }
 
                 Section {
@@ -156,6 +159,7 @@ struct SettingsView: View {
                     Text("Daily score")
                 } footer: {
                     Text("Missing metrics are shown as unavailable and the remaining weights are rebalanced. Reports without sleep or food are marked provisional.")
+                        .padding(.leading, 8)
                 }
 
                 Section {
@@ -197,6 +201,7 @@ struct SettingsView: View {
                     Text("Extended Commentary")
                 } footer: {
                     Text("Used by Brain Dump, Daily Report, and Insights. Apple Intelligence remains the default. Gemma is an optional 2.59 GB download, runs entirely on device, and is excluded from backups. Conversations and generated commentary are never saved.")
+                        .padding(.leading, 8)
                 }
 
                 Section {
@@ -207,6 +212,7 @@ struct SettingsView: View {
                     }
                 } footer: {
                     Text("Corrections teach Dr Jay how to classify the same food next time. Everything stays on device.")
+                        .padding(.leading, 8)
                 }
 
                 Section {
@@ -261,6 +267,7 @@ struct SettingsView: View {
                     Text(AppConfig.provisioningExpiryDate == nil
                          ? "Export a JSON backup to keep a separate copy of your history, exercise logs, and learned food corrections. Keep exported files somewhere private."
                          : "Development-signed installs expire. Export a backup before reinstalling to keep your history, exercise logs, and learned food corrections.")
+                        .padding(.leading, 8)
                 }
 
                 Section("About") {
@@ -320,6 +327,7 @@ struct SettingsView: View {
                     .disabled(isResetting)
                 } footer: {
                     Text("Erases all logged history, including exercise and Presence notes, learned food corrections, streaks, and settings, and starts onboarding over. This can't be undone.")
+                        .padding(.leading, 8)
                 }
             }
             .scrollContentBackground(.hidden)
@@ -530,6 +538,7 @@ private struct ThemePickerView: View {
                 }
             } footer: {
                 Text("Inspired by Pantone colors.")
+                    .padding(.leading, 8)
             }
         }
         .scrollContentBackground(.hidden)

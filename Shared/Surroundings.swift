@@ -30,21 +30,21 @@ struct SurroundingsSuggestion: Equatable, Sendable {
         guard weather.isUsable(at: now) else { return nil }
         if weather.apparentTemperatureC >= 28 || weather.temperatureC >= 30 {
             return Self(kind: .warm, title: "Keep it comfortable",
-                        detail: "Warm outside? Keep water within reach and sip as suits you. A familiar meal with fruit or vegetables can be a refreshing option.")
+                        detail: "Warm outside? Keep water handy and sip as suits you.")
         }
         if weather.humidityPercent >= 75 && weather.temperatureC >= 24 {
             return Self(kind: .humid, title: "A little breathing room",
-                        detail: "It looks warm and humid. Consider a cool place for your next meal, and keep your usual drink handy.")
+                        detail: "Warm and humid? Try a cool spot for your next meal.")
         }
         if weather.temperatureC <= 10 {
             return Self(kind: .cool, title: "Something warm, if you fancy",
-                        detail: "A warm meal such as soup, or a warm non-alcoholic drink, might feel welcome in the cooler weather.")
+                        detail: "Cool outside? Soup or a warm non-alcoholic drink might be welcome.")
         }
         if [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99].contains(weather.weatherCode) {
             return Self(kind: .wet, title: "An easy indoor option",
-                        detail: "Wet weather nearby? A familiar meal at home and your usual drink can keep the day simple.")
+                        detail: "Wet outside? Keep it simple with a familiar meal at home.")
         }
         return Self(kind: .mild, title: "Keep the basics easy",
-                    detail: "Weather looks mild. Make space for a regular meal and keep a drink handy if you want one.")
+                    detail: "Mild outside. Make time for a regular meal.")
     }
 }
