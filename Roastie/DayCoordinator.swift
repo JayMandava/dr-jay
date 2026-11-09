@@ -13,9 +13,17 @@ final class DayCoordinator {
     static let shared = DayCoordinator()
 
     private let context: ModelContext
+    private let surroundingsBackupEnabled: Bool
 
     private init() {
         self.context = ModelContext(PersistenceController.modelContainer)
+        self.surroundingsBackupEnabled = true
+    }
+
+    /// Fixture stores must never overwrite the user’s automatic backup.
+    init(context: ModelContext) {
+        self.context = context
+        self.surroundingsBackupEnabled = false
     }
 
     @discardableResult
@@ -48,6 +56,34 @@ final class DayCoordinator {
         context.insert(log)
         saveContext(operation: "Create today's log")
         return log
+    }
+
+    /// Records a separate +1 for today, never a core score or goal adjustment.
+    /// No suspension occurs before saving, so repeated taps cannot claim twice.
+    @discardableResult
+    public func claimSurroundingsBonus() async -> Bool {
+        let settings = SharedStore.loadSettings()
+        guard settings.surroundingsAwarenessEnabled else { return false }
+        let now = Date()
+        let key = now.dayKey
+        let existing: DailyLog?
+        do {
+            existing = try context.fetch(FetchDescriptor<DailyLog>(predicate: #Predicate { $0.dayKey == key })).first
+        } catch {
+            AppLogger.report(error, operation: "Fetch surroundings bonus day", logger: AppLogger.persistence)
+            return false
+        }
+        let log = existing ?? DailyLog(dayKey: key, date: now.startOfDay, waterGoalBottles: settings.waterGoalBottles)
+        guard log.surroundingsBonusEarnedAt == nil else { return false }
+        if existing == nil { context.insert(log) }
+        log.surroundingsBonusEarnedAt = now
+        guard saveContext(operation: "Save surroundings bonus") else {
+            log.surroundingsBonusEarnedAt = nil
+            if existing == nil { context.delete(log) }
+            return false
+        }
+        if surroundingsBackupEnabled { persistBackup() }
+        return true
     }
 
     /// Settings only writes the new goal into `AppSettings` — today's

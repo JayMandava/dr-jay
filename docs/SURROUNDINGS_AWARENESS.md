@@ -1,0 +1,93 @@
+# Surroundings Awareness
+
+## Existing standards reviewed
+
+Implementation starts from main `3dcdccf` on local branch
+`feature/surroundings-awareness`. The prior cloud Siri checkout is untouched.
+
+Reviewed the Spirits implementation and subsequent corrections before editing:
+
+- `4c0af27`: match existing logging typography, field spacing, themed controls,
+  and straightforward copy rather than adding another visual language.
+- `cf91ecb`: hidden ledger uses a 92% floating card.
+- `7a54c82`: daily report uses the same floating presentation.
+
+This feature reuses Settings' native Form section and Today's `clinicalCard`,
+16-point padding, 12-point content spacing, semantic type, and DrJayTheme.
+It adds no modal and leaves the corrected sheet presentations unchanged.
+
+## Behavior and boundaries
+
+- `AppSettings.surroundingsAwarenessEnabled` defaults to false, including
+  migration from settings without that key.
+- Enabling does not request permission or network data. The separate Check
+  Weather action explains/uses the previously disclosed location sharing.
+- A one-shot foreground CLLocationManager requests kilometer accuracy.
+  Coordinates are rounded to 0.1 degree before an ephemeral HTTPS Open-Meteo
+  request. No health data, user notes, or app identifier is included.
+- Coordinates and weather are not persisted. Cache expires after 30 minutes
+  and cannot be reused on a different local calendar day. Requests time out;
+  disable cancels them, clears weather, and ignores stale callbacks.
+- Suggestions use deterministic gentle text for warm, humid, cool, wet, or
+  mild weather. No disease prevention, medical benefit, fixed extra water,
+  dietary restriction, or goal change is claimed. User-specific fluid and
+  dietary guidance takes precedence.
+- Following an idea is self-reported. The explicit completion button stores
+  one optional timestamp on today's DailyLog. One timestamp means at most a
+  separate +1 daily badge, never a cumulative reward per tap.
+- Core score, verdict, weights, goals, streaks, exposure penalties, model
+  prompts, notifications, widgets, and Live Activities are unchanged.
+- Backup version 10 includes only the completion timestamp, not location,
+  weather, or suggestion text. Legacy backups decode with no bonus.
+- Disable hides the feature but preserves any already-earned timestamp.
+  Reset App Data deletes it with the log.
+
+## Verification
+
+Added XCTest cases for weather branches/boundaries, invalid/stale/future and
+previous-day weather, settings migration/round-trip, no permission while off
+or merely enabled, cancellation/late callbacks, repeat claims, persistence
+across reopening the store, disabled claims, failed saves, backup round-trip,
+and legacy imports. The native suite must be run on an Apple SDK environment.
+
+Completed checks on the final source:
+
+- `git diff --check`: passed.
+- Tree-sitter Swift syntax parsing: all 13 changed/new Swift files passed.
+- Info.plist and project.yml parsing: passed; matching foreground location
+  purpose strings and no background-location capability verified.
+- Independent source review: midnight cache and test backup-isolation issues
+  were found and corrected. Existing core scoring files remain unchanged.
+
+This implementation was prepared on Linux with no Swift or Xcode executable.
+Static checks are not a successful native build or simulator test. Before
+merge or distribution, run:
+
+```sh
+DEVELOPMENT_TEAM=YOUR_TEAM_ID xcodegen generate
+xcodebuild -project Roastie.xcodeproj -scheme Roastie \
+  -configuration Debug -destination 'generic/platform=iOS' build-for-testing
+# Select an installed iOS 26 simulator UDID for executable unit/UI tests:
+xcodebuild -project Roastie.xcodeproj -scheme Roastie \
+  -destination 'platform=iOS Simulator,id=SIMULATOR_UDID' test
+```
+
+Manual device/simulator checks still required:
+
+1. Fresh install and migrated settings: off, no location prompt/network.
+2. Enable then close/reopen Settings: no prompt until Check Weather.
+3. Allow approximate location, deny/restrict location, and change permission
+   while a request is pending. Core logging always remains usable.
+4. Disable/re-enable during location lookup and weather request: no late
+   result can repopulate disabled UI. Offline and timeout states allow retry.
+5. Repeat completion taps, relaunch, toggle off/on, and cross local midnight:
+   only one badge per day; old weather requires refreshing for the new day.
+6. Verify light/dark themes, large Dynamic Type, VoiceOver, and narrow iPhone
+   layout. Check weather status/error, completion, and long suggestion copy.
+7. Compare core score/verdict/goals before and after completion and inspect
+   backup JSON for no location/weather/suggestion data.
+
+The Open-Meteo link provides attribution. Confirm the provider's current
+licensing/service terms and suitability for the app's distribution model
+before release, especially if commercial use is planned. No account, API key,
+paid plan, remote branch, PR, merge, or deployment was created by this work.

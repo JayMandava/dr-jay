@@ -252,6 +252,17 @@ logs. Presence does not affect scores, streaks, trend baselines, or notification
 Entries and notes persist locally and are included in version-8 JSON backups;
 older backups restore with no Presence entries. Brain Dump remains ephemeral.
 
+## Surroundings Awareness
+
+Optional and off by default in Settings. After enabling, tap Check Weather on
+Today to allow a one-shot foreground location lookup. Open-Meteo receives only
+rounded coordinates and ordinary connection metadata; no health logs are sent.
+Weather remains in memory for at most 30 minutes. Gentle food/hydration ideas
+leave goals, core score, verdict, and streaks unchanged. A self-reported
+suggestion completion earns a separate +1 badge, capped at one per local day,
+with no penalty for skipping. Bonus timestamps persist in version-10 backups.
+See [implementation and verification notes](docs/SURROUNDINGS_AWARENESS.md).
+
 ## Setup
 
 1. Install Xcode with the iOS 26+ SDK and install XcodeGen if needed:

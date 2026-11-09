@@ -253,7 +253,7 @@ final class ExposureTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
         try BackupManager.write([source], to: url)
         let payload = try BackupManager.read(from: url)
-        XCTAssertEqual(payload.version, 9)
+        XCTAssertEqual(payload.version, 10)
         let restored = DailyLog(dayKey: source.dayKey, date: source.date, waterGoalBottles: 4)
         BackupManager.restore(try XCTUnwrap(payload.logs.first), into: restored)
         XCTAssertEqual(restored.exposureEntries, source.exposureEntries)

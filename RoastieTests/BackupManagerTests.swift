@@ -4,6 +4,7 @@ import XCTest
 final class BackupManagerTests: XCTestCase {
     func testBackupRoundTripAndRestorePreserveHistory() throws {
         let source = DailyLog(dayKey: "2026-09-23", date: TestSupport.date(23), waterGoalBottles: 5)
+        source.surroundingsBonusEarnedAt = TestSupport.date(23, hour: 14)
         source.sleepHours = 7.5
         source.sleepSource = "manual"
         source.waterBottlesLogged = 3
@@ -54,6 +55,8 @@ final class BackupManagerTests: XCTestCase {
         let restored = DailyLog(dayKey: entry.dayKey, date: .distantPast, waterGoalBottles: 1)
         BackupManager.restore(entry, into: restored)
 
+        XCTAssertEqual(payload.version, 10)
+        XCTAssertEqual(restored.surroundingsBonusEarnedAt, source.surroundingsBonusEarnedAt)
         XCTAssertEqual(restored.date, source.date)
         XCTAssertEqual(restored.sleepHours, source.sleepHours)
         XCTAssertEqual(restored.sleepSource, "manual")
@@ -122,6 +125,7 @@ final class BackupManagerTests: XCTestCase {
         let restored = DailyLog(dayKey: entry.dayKey, date: .distantPast, waterGoalBottles: 1)
         BackupManager.restore(entry, into: restored)
 
+        XCTAssertNil(restored.surroundingsBonusEarnedAt)
         XCTAssertEqual(restored.foodEntries, [])
         XCTAssertNil(restored.foodScore)
         XCTAssertNil(restored.foodScoreSummary)
@@ -129,6 +133,26 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertNil(restored.foodScoreVersion)
         XCTAssertEqual(restored.exerciseEntries, [])
         XCTAssertNil(payload.foodCorrectionMemories)
+    }
+
+    func testVersionNineBackupMissingBonusRestoresWithoutInventingReward() throws {
+        let source = DailyLog(dayKey: "2026-09-23", date: TestSupport.date(23), waterGoalBottles: 4)
+        let url = FileManager.default.temporaryDirectory.appending(path: "legacy-bonus-\(UUID()).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try BackupManager.write([source], to: url)
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        json["version"] = 9
+        var logs = try XCTUnwrap(json["logs"] as? [[String: Any]])
+        logs[0].removeValue(forKey: "surroundingsBonusEarnedAt")
+        json["logs"] = logs
+        try JSONSerialization.data(withJSONObject: json).write(to: url)
+        let payload = try BackupManager.read(from: url)
+        let entry = try XCTUnwrap(payload.logs.first)
+        XCTAssertNil(entry.surroundingsBonusEarnedAt)
+        let restored = DailyLog(dayKey: entry.dayKey, date: .distantPast, waterGoalBottles: 1)
+        restored.surroundingsBonusEarnedAt = TestSupport.date(23, hour: 14)
+        BackupManager.restore(entry, into: restored)
+        XCTAssertNil(restored.surroundingsBonusEarnedAt)
     }
 
     func testVersionFourBackupInfersManualCorrectionMemory() throws {

@@ -195,6 +195,9 @@ final class DailyLog {
     var presenceEntries: [PresenceEntry]?
     /// Optional keeps stores from before hidden exposure tracking migratable.
     var exposureEntries: [ExposureEntry]?
+    /// Separate optional reward; never included in core scores or verdicts.
+    /// Optional so existing stores migrate without inferred bonus history.
+    var surroundingsBonusEarnedAt: Date?
 
     init(dayKey: String, date: Date, waterGoalBottles: Int) {
         self.dayKey = dayKey
@@ -213,6 +216,7 @@ final class DailyLog {
         self.exerciseEntries = []
         self.presenceEntries = []
         self.exposureEntries = []
+        self.surroundingsBonusEarnedAt = nil
     }
 
     /// Coverage and score are derived, not an additional persisted source of truth.
@@ -360,6 +364,7 @@ struct AppSettings: Codable, Sendable {
     var roastIntensity: RoastIntensity
     var foodRoastsEnabled: Bool
     var dailyScoreProfile: DailyScoreProfile
+    var surroundingsAwarenessEnabled: Bool
     var healthKitEnabled: Bool
     var onboardingComplete: Bool
 
@@ -374,6 +379,7 @@ struct AppSettings: Codable, Sendable {
         roastIntensity: RoastIntensity = .gentle,
         foodRoastsEnabled: Bool = false,
         dailyScoreProfile: DailyScoreProfile = .balanced,
+        surroundingsAwarenessEnabled: Bool = false,
         healthKitEnabled: Bool = false,
         onboardingComplete: Bool = false
     ) {
@@ -383,6 +389,7 @@ struct AppSettings: Codable, Sendable {
         self.roastIntensity = roastIntensity
         self.foodRoastsEnabled = foodRoastsEnabled
         self.dailyScoreProfile = dailyScoreProfile
+        self.surroundingsAwarenessEnabled = surroundingsAwarenessEnabled
         self.healthKitEnabled = healthKitEnabled
         self.onboardingComplete = onboardingComplete
     }
@@ -390,6 +397,7 @@ struct AppSettings: Codable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case waterGoalBottles, bottleSizeMl, checkInHours, roastIntensity
         case foodRoastsEnabled, dailyScoreProfile, healthKitEnabled, onboardingComplete
+        case surroundingsAwarenessEnabled
     }
 
     init(from decoder: Decoder) throws {
@@ -405,6 +413,7 @@ struct AppSettings: Codable, Sendable {
             roastIntensity: try container.decodeIfPresent(RoastIntensity.self, forKey: .roastIntensity) ?? .gentle,
             foodRoastsEnabled: try container.decodeIfPresent(Bool.self, forKey: .foodRoastsEnabled) ?? false,
             dailyScoreProfile: try container.decodeIfPresent(DailyScoreProfile.self, forKey: .dailyScoreProfile) ?? .balanced,
+            surroundingsAwarenessEnabled: try container.decodeIfPresent(Bool.self, forKey: .surroundingsAwarenessEnabled) ?? false,
             healthKitEnabled: try container.decodeIfPresent(Bool.self, forKey: .healthKitEnabled) ?? false,
             onboardingComplete: try container.decodeIfPresent(Bool.self, forKey: .onboardingComplete) ?? false
         )
