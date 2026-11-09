@@ -41,16 +41,17 @@ struct SurroundingsCard: View {
                                 isSaving = false
                             }
                         } label: {
-                            Label(isSaving ? "Saving…" : "I followed this suggestion", systemImage: "checkmark")
+                            Label(isSaving ? "Saving…" : "I did this", systemImage: "checkmark")
                                 .font(.subheadline.weight(.semibold))
                         }
                         .buttonStyle(.bordered)
+                        .accessibilityLabel(isSaving ? "Saving…" : "I did this suggestion")
                         .disabled(isSaving)
                     }
                     Text("Updated \(weather.observedAt.formatted(date: .omitted, time: .shortened))")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
-                    Text("Check nearby weather for an optional food or hydration idea.")
+                    Text("Check weather for a food or hydration idea.")
                         .font(.subheadline).foregroundStyle(.secondary)
                     if earnedToday {
                         Text("Suggestion bonus +1 today").font(.subheadline.weight(.semibold))
@@ -69,7 +70,7 @@ struct SurroundingsCard: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(isLoading || isSaving)
-                Text("Optional · At most +1 per day, separate from your score. No penalty for skipping. Goals and core verdict stay unchanged. Follow your personal fluid and dietary guidance.")
+                Text("Optional · +1 max per day, separate from your score. Follow your personal fluid and dietary guidance.")
                     .font(.caption).foregroundStyle(.secondary)
                 Link("Weather by Open-Meteo · CC BY 4.0", destination: URL(string: "https://open-meteo.com/")!)
                     .font(.caption)

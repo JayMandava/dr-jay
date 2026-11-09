@@ -55,7 +55,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Surroundings")
                 } footer: {
-                    Text("Off by default. When enabled, tap Check Weather on Today to allow location access. Your approximate area (coordinates rounded to 0.1°) and IP address go to Open-Meteo for local weather. No health logs are sent. Location and weather stay in memory, not history or exports. Optional food and hydration ideas never change your goals or core verdict. Following one can earn a separate +1 bonus per day, with no penalty for skipping. Follow any personal fluid or dietary guidance.")
+                    SettingsFootnote("Off by default. Check Weather on Today shares your approximate location and IP address with Open-Meteo. No health logs are sent. Details in Privacy Policy below.")
                 }
 
                 Section("Apple Health") {
@@ -129,7 +129,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Roast intensity")
                 } footer: {
-                    Text("Gentle implies. Playful teases. Spicy lands a short, unsparing punchline.")
+                    SettingsFootnote("Gentle implies. Playful teases. Spicy lands a short, unsparing punchline.")
                 }
 
                 Section {
@@ -137,7 +137,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Food feedback")
                 } footer: {
-                    Text("Food classifications are on-device estimates. When this is off, food still contributes to the score but receives no roast. Dr Jay never comments on calories, body, or weight.")
+                    SettingsFootnote("Food classifications are on-device estimates. When this is off, food still contributes to the score but receives no roast. Dr Jay never comments on calories, body, or weight.")
                 }
 
                 Section {
@@ -155,7 +155,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Daily score")
                 } footer: {
-                    Text("Missing metrics are shown as unavailable and the remaining weights are rebalanced. Reports without sleep or food are marked provisional.")
+                    SettingsFootnote("Missing metrics are shown as unavailable and the remaining weights are rebalanced. Reports without sleep or food are marked provisional.")
                 }
 
                 Section {
@@ -196,7 +196,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Extended Commentary")
                 } footer: {
-                    Text("Used by Brain Dump, Daily Report, and Insights. Apple Intelligence remains the default. Gemma is an optional 2.59 GB download, runs entirely on device, and is excluded from backups. Conversations and generated commentary are never saved.")
+                    SettingsFootnote("Used by Brain Dump, Daily Report, and Insights. Apple Intelligence remains the default. Gemma is an optional 2.59 GB download, runs entirely on device, and is excluded from backups. Conversations and generated commentary are never saved.")
                 }
 
                 Section {
@@ -206,7 +206,7 @@ struct SettingsView: View {
                         Label("Food Memories", systemImage: "brain.head.profile")
                     }
                 } footer: {
-                    Text("Corrections teach Dr Jay how to classify the same food next time. Everything stays on device.")
+                    SettingsFootnote("Corrections teach Dr Jay how to classify the same food next time. Everything stays on device.")
                 }
 
                 Section {
@@ -258,7 +258,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Data")
                 } footer: {
-                    Text(AppConfig.provisioningExpiryDate == nil
+                    SettingsFootnote(AppConfig.provisioningExpiryDate == nil
                          ? "Export a JSON backup to keep a separate copy of your history, exercise logs, and learned food corrections. Keep exported files somewhere private."
                          : "Development-signed installs expire. Export a backup before reinstalling to keep your history, exercise logs, and learned food corrections.")
                 }
@@ -319,7 +319,7 @@ struct SettingsView: View {
                     }
                     .disabled(isResetting)
                 } footer: {
-                    Text("Erases all logged history, including exercise and Presence notes, learned food corrections, streaks, and settings, and starts onboarding over. This can't be undone.")
+                    SettingsFootnote("Erases all logged history, including exercise and Presence notes, learned food corrections, streaks, and settings, and starts onboarding over. This can't be undone.")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -529,7 +529,7 @@ private struct ThemePickerView: View {
                     .accessibilityAddTraits(selection == theme ? .isSelected : [])
                 }
             } footer: {
-                Text("Inspired by Pantone colors.")
+                SettingsFootnote("Inspired by Pantone colors.")
             }
         }
         .scrollContentBackground(.hidden)
@@ -567,4 +567,44 @@ private struct ActivityShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+/// UIKit supplies paragraph justification, which SwiftUI Text does not expose.
+/// The final line keeps its natural alignment rather than stretching short text.
+private struct SettingsFootnote: UIViewRepresentable {
+    let text: String
+    @ScaledMetric(relativeTo: .footnote) private var fontSize: CGFloat = 13
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    func makeUIView(context: Context) -> UILabel {
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
+        label.textAlignment = .justified
+        label.textColor = .secondaryLabel
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        label.isAccessibilityElement = true
+        label.accessibilityTraits = .staticText
+        return label
+    }
+
+    func updateUIView(_ label: UILabel, context: Context) {
+        label.text = text
+        // SwiftUI scales this metric, including environment overrides used in previews.
+        label.font = .systemFont(
+            ofSize: fontSize,
+            weight: context.environment.legibilityWeight == .bold ? .bold : .regular
+        )
+        label.semanticContentAttribute = context.environment.layoutDirection == .rightToLeft
+            ? .forceRightToLeft : .forceLeftToRight
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UILabel, context: Context) -> CGSize? {
+        guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
+        let size = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: ceil(size.height))
+    }
 }
