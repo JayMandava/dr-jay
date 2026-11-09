@@ -55,7 +55,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Surroundings")
                 } footer: {
-                    Text("Off by default. When enabled, tap Check Weather on Today to allow location access. Your approximate area (coordinates rounded to 0.1°) and IP address go to Open-Meteo for local weather. No health logs are sent. Location and weather stay in memory, not history or exports. Optional food and hydration ideas never change your goals or core verdict. Following one can earn a separate +1 bonus per day, with no penalty for skipping. Follow any personal fluid or dietary guidance.")
+                    Text("Off by default. Tap Check Weather on Today to share your approximate location with Open-Meteo for a food or hydration idea. No health logs are sent. See Privacy Policy below.")
                 }
 
                 Section("Apple Health") {

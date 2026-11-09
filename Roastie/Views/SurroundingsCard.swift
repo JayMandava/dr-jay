@@ -69,7 +69,7 @@ struct SurroundingsCard: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(isLoading || isSaving)
-                Text("Optional · At most +1 per day, separate from your score. No penalty for skipping. Goals and core verdict stay unchanged. Follow your personal fluid and dietary guidance.")
+                Text("Optional · Up to +1 a day, separate from your score. General ideas, not medical advice.")
                     .font(.caption).foregroundStyle(.secondary)
                 Link("Weather by Open-Meteo · CC BY 4.0", destination: URL(string: "https://open-meteo.com/")!)
                     .font(.caption)
