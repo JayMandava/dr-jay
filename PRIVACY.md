@@ -1,6 +1,6 @@
 # Dr Jay Privacy Policy
 
-Effective November 6, 2026. Dr Jay is developed by Jeyanth Mandava. This policy covers the iPhone app, its widgets, Live Activities, and optional on-device models.
+Effective November 9, 2026. Dr Jay is developed by Jeyanth Mandava. This policy covers the iPhone app, its widgets, Live Activities, and optional on-device models.
 
 ## Your entries stay local
 
@@ -15,6 +15,14 @@ Your entries are not uploaded to the developer or sent to a remote AI service. A
 With your permission, Dr Jay reads sleep information and today's step count from Apple Health. It does not write to Apple Health. Sleep information used in your daily record can be stored locally and included in a JSON export. Step totals are displayed and used for the current daily report, but are not saved in Dr Jay's history or exports. Insights do not retain historical step counts.
 
 You can stop sleep syncing in Settings. To revoke Health permissions, use the Health app's access controls for Dr Jay. Turning off access does not delete previously saved sleep entries; use Reset App Data to erase them. Dr Jay is an accountability and wellbeing tool, not medical care, diagnosis, or treatment.
+
+## Optional Surroundings Awareness
+
+Surroundings Awareness is off by default. Enabling it does not request location or contact a weather service. When you tap Check Weather on Today, the app requests foreground location permission and sends coordinates rounded to 0.1 degree (roughly a neighborhood or wider area) directly to Open-Meteo over HTTPS. Open-Meteo also receives ordinary connection information such as your IP address. No health logs, food text, notes, or identifiers from Dr Jay are included. See [Open-Meteo's privacy policy](https://open-meteo.com/en/terms#privacy).
+
+The app does not track background location. Coordinates and weather are kept only in memory; the app uses an ephemeral network session without a disk cache. Weather expires after 30 minutes. Turning the feature off cancels pending requests and clears its in-memory weather, but cannot undo requests already sent. iOS location permission remains under your control in Settings. The weather provider handles received requests under its own policy.
+
+Suggestions are general comfort ideas, not medical advice, weather alerts, or fluid prescriptions. They do not alter goals, core scores, verdicts, or streaks. Following a suggestion can earn a separate, self-reported +1 bonus at most once per day. Only the bonus completion time is saved in that day's local record and JSON backups, not the location, weather, or suggestion. Turning the feature off hides it without deleting previously earned bonuses. Reset App Data removes them with the rest of your logs.
 
 ## Brain Dump
 

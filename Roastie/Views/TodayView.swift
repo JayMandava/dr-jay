@@ -7,6 +7,7 @@ struct TodayView: View {
     @Binding var theme: AppTheme
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
+    @State private var surroundingsWeather = SurroundingsWeatherService()
     @State private var showSettings = false
     @State private var showSleepSheet = false
     @State private var showFoodSheet = false
@@ -123,6 +124,17 @@ struct TodayView: View {
                             icon: "birthday.cake.fill",
                             title: "Sugary items",
                             subtitle: exposureSubtitle
+                        )
+                    }
+
+                    if settings.surroundingsAwarenessEnabled {
+                        SurroundingsCard(
+                            weather: surroundingsWeather.snapshot,
+                            isLoading: surroundingsWeather.isLoading,
+                            statusMessage: surroundingsWeather.statusMessage,
+                            bonusEarnedAt: today?.surroundingsBonusEarnedAt,
+                            onRefresh: { surroundingsWeather.refresh() },
+                            onComplete: { await DayCoordinator.shared.claimSurroundingsBonus() }
                         )
                     }
 
@@ -256,6 +268,9 @@ struct TodayView: View {
                     message: Text(feedback.message),
                     dismissButton: .default(Text("Noted"))
                 )
+            }
+            .onChange(of: settings.surroundingsAwarenessEnabled, initial: true) { _, enabled in
+                surroundingsWeather.setEnabled(enabled)
             }
             .task {
                 await DayCoordinator.shared.refreshToday()
