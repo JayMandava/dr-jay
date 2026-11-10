@@ -195,9 +195,12 @@ final class DailyLog {
     var presenceEntries: [PresenceEntry]?
     /// Optional keeps stores from before hidden exposure tracking migratable.
     var exposureEntries: [ExposureEntry]?
-    /// Separate optional reward; never included in core scores or verdicts.
+    /// Separate optional rewards; never included in core scores or verdicts.
     /// Optional so existing stores migrate without inferred bonus history.
+    /// When the water suggestion was finished (the day's bottles reached the goal).
     var surroundingsBonusEarnedAt: Date?
+    /// Which of the day's food idea slots (0..<3) were picked; slots, not text.
+    var surroundingsFoodPicks: [Int]?
 
     init(dayKey: String, date: Date, waterGoalBottles: Int) {
         self.dayKey = dayKey
@@ -217,6 +220,7 @@ final class DailyLog {
         self.presenceEntries = []
         self.exposureEntries = []
         self.surroundingsBonusEarnedAt = nil
+        self.surroundingsFoodPicks = nil
     }
 
     /// Coverage and score are derived, not an additional persisted source of truth.

@@ -3,68 +3,144 @@ import SwiftData
 @testable import Roastie
 
 final class SurroundingsBonusPersistenceTests: XCTestCase {
-    @MainActor
-    func testDisabledDoesNotCreateLogAndRepeatedClaimPersistsOnlyOnce() async throws {
-        let previousSettings = SharedStore.loadSettings()
-        defer { SharedStore.save(previousSettings) }
+    private var previousSettings = AppSettings()
+
+    override func setUp() {
+        super.setUp()
+        previousSettings = SharedStore.loadSettings()
+    }
+
+    override func tearDown() {
+        SharedStore.save(previousSettings)
+        super.tearDown()
+    }
+
+    private func setAwareness(_ enabled: Bool) {
         var settings = previousSettings
-        settings.surroundingsAwarenessEnabled = false
+        settings.surroundingsAwarenessEnabled = enabled
         SharedStore.save(settings)
+    }
+
+    private func storeURL(_ name: String) throws -> URL {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let url = directory.appending(path: "bonus.store")
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        return directory.appending(path: name)
+    }
+
+    private func todayLog(logged: Int, goal: Int = 4, in context: ModelContext) -> DailyLog {
+        let now = Date()
+        let log = DailyLog(dayKey: now.dayKey, date: now.startOfDay, waterGoalBottles: goal)
+        log.waterBottlesLogged = logged
+        context.insert(log)
+        return log
+    }
+
+    @MainActor
+    func testDisabledDoesNothingAndWaterBonusClaimsOnlyOnceWhenGoalIsMet() async throws {
+        let url = try storeURL("water.store")
         let today = Date().dayKey
         var earnedAt: Date?
         do {
             let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(url: url))
             let context = ModelContext(container)
             let coordinator = DayCoordinator(context: context)
-            let disabledResult = await coordinator.claimSurroundingsBonus()
-            XCTAssertFalse(disabledResult)
+            setAwareness(false)
+            let disabledWater = await coordinator.claimSurroundingsWaterBonus()
+            let disabledFood = await coordinator.claimSurroundingsFoodPick(slot: 0)
+            XCTAssertFalse(disabledWater)
+            XCTAssertFalse(disabledFood)
             XCTAssertTrue(try context.fetch(FetchDescriptor<DailyLog>()).isEmpty)
+
+            setAwareness(true)
             let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-            context.insert(DailyLog(dayKey: yesterday.dayKey, date: yesterday.startOfDay, waterGoalBottles: 4))
+            let old = DailyLog(dayKey: yesterday.dayKey, date: yesterday.startOfDay, waterGoalBottles: 4)
+            old.waterBottlesLogged = 4
+            context.insert(old)
+            let log = todayLog(logged: 3, in: context)
             try context.save()
-            settings.surroundingsAwarenessEnabled = true
-            SharedStore.save(settings)
-            let firstResult = await coordinator.claimSurroundingsBonus()
-            let secondResult = await coordinator.claimSurroundingsBonus()
-            XCTAssertTrue(firstResult)
-            XCTAssertFalse(secondResult)
+            let short = await coordinator.claimSurroundingsWaterBonus()
+            XCTAssertFalse(short, "three of four bottles is not the whole suggestion")
+            XCTAssertNil(log.surroundingsBonusEarnedAt)
+
+            log.waterBottlesLogged = 4
+            try context.save()
+            let first = await coordinator.claimSurroundingsWaterBonus()
+            let second = await coordinator.claimSurroundingsWaterBonus()
+            XCTAssertTrue(first)
+            XCTAssertFalse(second)
             let logs = try context.fetch(FetchDescriptor<DailyLog>())
             earnedAt = try XCTUnwrap(logs.first { $0.dayKey == today }?.surroundingsBonusEarnedAt)
             XCTAssertNil(logs.first { $0.dayKey == yesterday.dayKey }?.surroundingsBonusEarnedAt)
-            let log = try XCTUnwrap(logs.first { $0.dayKey == today })
-            XCTAssertEqual(log.waterBottlesLogged, 0)
-            XCTAssertNil(log.sleepHours)
-            XCTAssertTrue(log.checkIns.isEmpty)
         }
         do {
             let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(url: url))
             let context = ModelContext(container)
             let logs = try context.fetch(FetchDescriptor<DailyLog>())
             XCTAssertEqual(logs.first { $0.dayKey == today }?.surroundingsBonusEarnedAt, earnedAt)
-            let result = await DayCoordinator(context: context).claimSurroundingsBonus()
-            XCTAssertFalse(result)
+            let again = await DayCoordinator(context: context).claimSurroundingsWaterBonus()
+            XCTAssertFalse(again)
         }
     }
 
     @MainActor
-    func testClaimDoesNotChangeScoreVerdictGoalsOrStreak() async throws {
-        let previousSettings = SharedStore.loadSettings()
-        defer { SharedStore.save(previousSettings) }
-        var settings = previousSettings
-        settings.surroundingsAwarenessEnabled = true
-        SharedStore.save(settings)
+    func testWaterBonusNeedsALogThatReachedTheGoalAndNeverCreatesOne() async throws {
+        setAwareness(true)
+        let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let context = ModelContext(container)
+        let coordinator = DayCoordinator(context: context)
+        let result = await coordinator.claimSurroundingsWaterBonus()
+        XCTAssertFalse(result)
+        XCTAssertTrue(try context.fetch(FetchDescriptor<DailyLog>()).isEmpty)
+        let invalidGoal = todayLog(logged: 0, goal: 0, in: context)
+        try context.save()
+        let invalid = await coordinator.claimSurroundingsWaterBonus()
+        XCTAssertFalse(invalid)
+        XCTAssertNil(invalidGoal.surroundingsBonusEarnedAt)
+    }
+
+    @MainActor
+    func testFoodPicksCountOncePerSlotAndPersist() async throws {
+        setAwareness(true)
+        let url = try storeURL("food.store")
+        let today = Date().dayKey
+        do {
+            let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(url: url))
+            let context = ModelContext(container)
+            let coordinator = DayCoordinator(context: context)
+            let second = await coordinator.claimSurroundingsFoodPick(slot: 1)
+            let repeated = await coordinator.claimSurroundingsFoodPick(slot: 1)
+            let first = await coordinator.claimSurroundingsFoodPick(slot: 0)
+            XCTAssertTrue(second)
+            XCTAssertFalse(repeated)
+            XCTAssertTrue(first)
+            for invalid in [-1, 3, Int.max, Int.min] {
+                let result = await coordinator.claimSurroundingsFoodPick(slot: invalid)
+                XCTAssertFalse(result)
+            }
+            let logs = try context.fetch(FetchDescriptor<DailyLog>())
+            XCTAssertEqual(logs.first { $0.dayKey == today }?.surroundingsFoodPicks, [0, 1])
+            XCTAssertNil(logs.first { $0.dayKey == today }?.surroundingsBonusEarnedAt)
+        }
+        do {
+            let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(url: url))
+            let context = ModelContext(container)
+            let logs = try context.fetch(FetchDescriptor<DailyLog>())
+            XCTAssertEqual(logs.first { $0.dayKey == today }?.surroundingsFoodPicks, [0, 1])
+            let again = await DayCoordinator(context: context).claimSurroundingsFoodPick(slot: 0)
+            XCTAssertFalse(again)
+        }
+    }
+
+    @MainActor
+    func testClaimsDoNotChangeScoreVerdictGoalsOrStreak() async throws {
+        setAwareness(true)
         let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = ModelContext(container)
         let now = Date()
-        let log = DailyLog(dayKey: now.dayKey, date: now.startOfDay, waterGoalBottles: 4)
+        let log = todayLog(logged: 4, in: context)
         log.sleepHours = 7
-        log.waterBottlesLogged = 4
         log.foodScore = 80
-        context.insert(log)
         try context.save()
         func summary(_ profile: DailyScoreProfile) -> DailySummaryResult {
             DailySummaryCalculator.calculate(DailySummaryInput(
@@ -78,9 +154,13 @@ final class SurroundingsBonusPersistenceTests: XCTestCase {
         let streak = StreakCalculator.calculate(logs: [log], referenceDate: now)
         let sleepGoalMet = log.sleepGoalMet
         let waterProgress = log.waterProgress
-        let result = await DayCoordinator(context: context).claimSurroundingsBonus()
-        XCTAssertTrue(result)
+        let coordinator = DayCoordinator(context: context)
+        let water = await coordinator.claimSurroundingsWaterBonus()
+        let food = await coordinator.claimSurroundingsFoodPick(slot: 2)
+        XCTAssertTrue(water)
+        XCTAssertTrue(food)
         XCTAssertNotNil(log.surroundingsBonusEarnedAt)
+        XCTAssertEqual(log.surroundingsFoodPicks, [2])
         XCTAssertEqual(profiles.map { summary($0) }, before)
         XCTAssertEqual(StreakCalculator.calculate(logs: [log], referenceDate: now), streak)
         XCTAssertEqual(log.sleepGoalMet, sleepGoalMet)
@@ -91,27 +171,24 @@ final class SurroundingsBonusPersistenceTests: XCTestCase {
     }
 
     @MainActor
-    func testSaveFailureDoesNotAwardBonus() async throws {
-        let previousSettings = SharedStore.loadSettings()
-        defer { SharedStore.save(previousSettings) }
-        var settings = previousSettings
-        settings.surroundingsAwarenessEnabled = true
-        SharedStore.save(settings)
-        let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let url = directory.appending(path: "readonly.store")
+    func testSaveFailureDoesNotAwardEitherBonus() async throws {
+        setAwareness(true)
+        let url = try storeURL("readonly.store")
         do {
             let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(url: url))
             let context = ModelContext(container)
-            context.insert(DailyLog(dayKey: Date().dayKey, date: Date().startOfDay, waterGoalBottles: 4))
+            _ = todayLog(logged: 4, in: context)
             try context.save()
         }
         let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(url: url, allowsSave: false))
         let context = ModelContext(container)
         let log = try XCTUnwrap(try context.fetch(FetchDescriptor<DailyLog>()).first)
-        let result = await DayCoordinator(context: context).claimSurroundingsBonus()
-        XCTAssertFalse(result)
+        let coordinator = DayCoordinator(context: context)
+        let water = await coordinator.claimSurroundingsWaterBonus()
+        let food = await coordinator.claimSurroundingsFoodPick(slot: 0)
+        XCTAssertFalse(water)
+        XCTAssertFalse(food)
         XCTAssertNil(log.surroundingsBonusEarnedAt)
+        XCTAssertNil(log.surroundingsFoodPicks)
     }
 }

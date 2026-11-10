@@ -155,7 +155,8 @@ final class SurroundingsWeatherService: NSObject, @preconcurrency CLLocationMana
                     apparentTemperatureC: current.apparentTemperature,
                     humidityPercent: current.humidity,
                     weatherCode: current.weatherCode,
-                    observedAt: now
+                    observedAt: now,
+                    region: SurroundingsRegion(latitude: latitude, longitude: longitude)
                 )
                 self.isLoading = false
                 self.statusMessage = "Weather from Open-Meteo for your approximate area."

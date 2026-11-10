@@ -27,7 +27,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>After you enable Surroundings Awareness and tap Check Weather, Dr Jay uses your approximate area to request weather from Open-Meteo. No health logs are shared.</string>
+	<string>After you enable Surroundings Awareness and tap Check Weather, Dr Jay uses your approximate area to request weather from Open-Meteo and to suggest regional food ideas on your device. No health logs are shared.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Dr Jay reads your sleep and today's step count from Health for your private daily report.</string>
 	<key>NSSupportsLiveActivities</key>

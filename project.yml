@@ -48,7 +48,7 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        NSLocationWhenInUseUsageDescription: "After you enable Surroundings Awareness and tap Check Weather, Dr Jay uses your approximate area to request weather from Open-Meteo. No health logs are shared."
+        NSLocationWhenInUseUsageDescription: "After you enable Surroundings Awareness and tap Check Weather, Dr Jay uses your approximate area to request weather from Open-Meteo and to suggest regional food ideas on your device. No health logs are shared."
         NSHealthShareUsageDescription: "Dr Jay reads your sleep and today's step count from Health for your private daily report."
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: true

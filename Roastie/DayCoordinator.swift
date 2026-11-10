@@ -58,10 +58,33 @@ final class DayCoordinator {
         return log
     }
 
-    /// Records a separate +1 for today, never a core score or goal adjustment.
-    /// No suspension occurs before saving, so repeated taps cannot claim twice.
+    /// Water bonus: +1 once today's logged bottles reach the goal. Never a core
+    /// score or goal adjustment, and it cannot be claimed without the log to prove it.
     @discardableResult
-    public func claimSurroundingsBonus() async -> Bool {
+    public func claimSurroundingsWaterBonus() async -> Bool {
+        await claimSurroundings { log, now in
+            guard log.waterGoalBottles > 0, log.waterBottlesLogged >= log.waterGoalBottles,
+                  log.surroundingsBonusEarnedAt == nil else { return nil }
+            log.surroundingsBonusEarnedAt = now
+            return { log.surroundingsBonusEarnedAt = nil }
+        }
+    }
+
+    /// Food bonus: +1 for each distinct idea slot picked today.
+    @discardableResult
+    public func claimSurroundingsFoodPick(slot: Int) async -> Bool {
+        guard (0..<SurroundingsSuggestion.foodSlotCount).contains(slot) else { return false }
+        return await claimSurroundings { log, _ in
+            let previous = log.surroundingsFoodPicks
+            guard !(previous ?? []).contains(slot) else { return nil }
+            log.surroundingsFoodPicks = ((previous ?? []) + [slot]).sorted()
+            return { log.surroundingsFoodPicks = previous }
+        }
+    }
+
+    /// `apply` mutates the log and returns how to undo it, or nil to decline.
+    /// No suspension occurs before saving, so repeated taps cannot claim twice.
+    private func claimSurroundings(_ apply: (DailyLog, Date) -> (() -> Void)?) async -> Bool {
         let settings = SharedStore.loadSettings()
         guard settings.surroundingsAwarenessEnabled else { return false }
         let now = Date()
@@ -74,11 +97,10 @@ final class DayCoordinator {
             return false
         }
         let log = existing ?? DailyLog(dayKey: key, date: now.startOfDay, waterGoalBottles: settings.waterGoalBottles)
-        guard log.surroundingsBonusEarnedAt == nil else { return false }
+        guard let undo = apply(log, now) else { return false }
         if existing == nil { context.insert(log) }
-        log.surroundingsBonusEarnedAt = now
         guard saveContext(operation: "Save surroundings bonus") else {
-            log.surroundingsBonusEarnedAt = nil
+            undo()
             if existing == nil { context.delete(log) }
             return false
         }

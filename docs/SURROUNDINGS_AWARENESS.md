@@ -28,18 +28,33 @@ It adds no modal and leaves the corrected sheet presentations unchanged.
 - Coordinates and weather are not persisted. Cache expires after 30 minutes
   and cannot be reused on a different local calendar day. Requests time out;
   disable cancels them, clears weather, and ignores stale callbacks.
-- Suggestions use deterministic gentle text for warm, humid, cool, wet, or
-  mild weather. No disease prevention, medical benefit, fixed extra water,
-  dietary restriction, or goal change is claimed. User-specific fluid and
-  dietary guidance takes precedence.
-- Following an idea is self-reported. The explicit completion button stores
-  one optional timestamp on today's DailyLog. One timestamp means at most a
-  separate +1 daily badge, never a cumulative reward per tap.
+- Suggestions are deterministic and optional. The card reads today's saved
+  water goal, logged bottles and bottle size to show what is left, and shows
+  a goal-met state at or above the target. It never adds weather-based water.
+- Food ideas sit in a collapsed "Food ideas near you" section so the card
+  stays short. Three examples come from the weather group (warm or humid,
+  cool, wet, mild) and a broad region chosen on device from the rounded
+  coordinates (nine regions plus a general fallback). The region is not
+  stored or sent anywhere. Region boxes are approximate; a border area may
+  get a neighbour's examples. No allergy or diet profile is inferred.
+- No disease prevention, medical benefit, fixed extra water, dietary
+  restriction, or goal change is claimed. User-specific fluid and dietary
+  guidance takes precedence.
+- Water is automatic and objective. When weather is checked, the card notes
+  how many bottles are left (in memory only). The +1 is awarded when today's
+  log reaches the goal after that, and the coordinator re-verifies the log.
+  If the goal was already met at the check, there is no water bonus.
+- Food is picked per idea. Tapping an idea stores its position (0 to 2) on
+  today's DailyLog, so each idea earns +1 once per day regardless of its text.
+  Food-safety reminders are shown but are not pickable.
+- A day can earn at most +4 (water +1, three food ideas +1 each), always
+  separate from the score and never a penalty for skipping.
 - Core score, verdict, weights, goals, streaks, exposure penalties, model
   prompts, notifications, widgets, and Live Activities are unchanged.
-- Backup version 10 includes only the completion timestamp, not location,
-  weather, or suggestion text. Legacy backups decode with no bonus.
-- Disable hides the feature but preserves any already-earned timestamp.
+- Backup version 11 includes only the water bonus timestamp and the picked
+  idea positions, not location, weather, or suggestion text. Older backups
+  decode with no bonus, and restored positions are limited to 0 to 2.
+- Disable hides the feature but preserves any already-earned bonus.
   Reset App Data deletes it with the log.
 
 ## Verification
