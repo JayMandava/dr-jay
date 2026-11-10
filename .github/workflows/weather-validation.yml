@@ -6,10 +6,23 @@ permissions:
   contents: read
 jobs:
   ios-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: weather-change
+            ref: fix/actionable-weather-suggestions
+            tests: ""
+          - name: unchanged-base-presentation
+            ref: 8321729739f5ad6f4a49305f4b5771ebd3d913a6
+            tests: "-only-testing:RoastieTests/LoggingSheetPresentationTests"
+    name: ${{ matrix.name }}
     runs-on: macos-26
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
       - name: Install project generator
         run: brew install xcodegen
       - name: Generate project
@@ -32,12 +45,12 @@ jobs:
           set -o pipefail
           xcodebuild -project Roastie.xcodeproj -scheme Roastie -configuration Debug \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
-            -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO test | tee test.log
+            -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO ${{ matrix.tests }} test | tee test.log
       - name: Retain test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: weather-test-evidence
+          name: weather-test-evidence-${{ matrix.name }}
           path: |
             test.log
             TestResults.xcresult
