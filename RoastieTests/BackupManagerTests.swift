@@ -5,6 +5,7 @@ final class BackupManagerTests: XCTestCase {
     func testBackupRoundTripAndRestorePreserveHistory() throws {
         let source = DailyLog(dayKey: "2026-09-23", date: TestSupport.date(23), waterGoalBottles: 5)
         source.surroundingsBonusEarnedAt = TestSupport.date(23, hour: 14)
+        source.surroundingsFoodPicks = [0, 2]
         source.sleepHours = 7.5
         source.sleepSource = "manual"
         source.waterBottlesLogged = 3
@@ -55,8 +56,9 @@ final class BackupManagerTests: XCTestCase {
         let restored = DailyLog(dayKey: entry.dayKey, date: .distantPast, waterGoalBottles: 1)
         BackupManager.restore(entry, into: restored)
 
-        XCTAssertEqual(payload.version, 10)
+        XCTAssertEqual(payload.version, 11)
         XCTAssertEqual(restored.surroundingsBonusEarnedAt, source.surroundingsBonusEarnedAt)
+        XCTAssertEqual(restored.surroundingsFoodPicks, [0, 2])
         XCTAssertEqual(restored.date, source.date)
         XCTAssertEqual(restored.sleepHours, source.sleepHours)
         XCTAssertEqual(restored.sleepSource, "manual")
@@ -126,6 +128,7 @@ final class BackupManagerTests: XCTestCase {
         BackupManager.restore(entry, into: restored)
 
         XCTAssertNil(restored.surroundingsBonusEarnedAt)
+        XCTAssertNil(restored.surroundingsFoodPicks)
         XCTAssertEqual(restored.foodEntries, [])
         XCTAssertNil(restored.foodScore)
         XCTAssertNil(restored.foodScoreSummary)
@@ -153,6 +156,20 @@ final class BackupManagerTests: XCTestCase {
         restored.surroundingsBonusEarnedAt = TestSupport.date(23, hour: 14)
         BackupManager.restore(entry, into: restored)
         XCTAssertNil(restored.surroundingsBonusEarnedAt)
+    }
+
+    func testRestoreKeepsOnlyValidDistinctFoodPickSlots() throws {
+        var entry = BackupManager.DailyLogExport(
+            dayKey: "2026-09-23", date: TestSupport.date(23), sleepHours: nil, sleepSource: "unknown",
+            waterGoalBottles: 4, waterBottlesLogged: 0, waterTimestamps: [], checkIns: []
+        )
+        entry.surroundingsFoodPicks = [2, 2, 0, -1, 3, 99]
+        let restored = DailyLog(dayKey: entry.dayKey, date: .distantPast, waterGoalBottles: 1)
+        BackupManager.restore(entry, into: restored)
+        XCTAssertEqual(restored.surroundingsFoodPicks, [0, 2])
+        entry.surroundingsFoodPicks = [7]
+        BackupManager.restore(entry, into: restored)
+        XCTAssertNil(restored.surroundingsFoodPicks)
     }
 
     func testVersionFourBackupInfersManualCorrectionMemory() throws {

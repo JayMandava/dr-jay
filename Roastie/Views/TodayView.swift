@@ -8,6 +8,8 @@ struct TodayView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \DailyLog.date, order: .reverse) private var logs: [DailyLog]
     @State private var surroundingsWeather = SurroundingsWeatherService()
+    /// Bottles still to log when weather was last checked; in memory only.
+    @State private var waterRemainingAtCheck: Int?
     @State private var showSettings = false
     @State private var showSleepSheet = false
     @State private var showFoodSheet = false
@@ -27,6 +29,24 @@ struct TodayView: View {
     @State private var commentaryModels = BrainDumpModelManager.shared
 
     private var today: DailyLog? { logs.first { $0.dayKey == Date().dayKey } }
+
+    private var surroundingsHydration: SurroundingsHydration {
+        SurroundingsHydration(
+            goalBottles: today?.waterGoalBottles ?? settings.waterGoalBottles,
+            bottlesLogged: today?.waterBottlesLogged ?? 0,
+            bottleSizeMl: settings.bottleSizeMl
+        )
+    }
+
+    /// The water bonus needs the bottles that were left at the check to be logged afterwards.
+    private func claimWaterBonusIfFinished() {
+        guard settings.surroundingsAwarenessEnabled, (waterRemainingAtCheck ?? 0) > 0,
+              surroundingsWeather.snapshot?.isUsable(at: .now) == true,
+              let today, today.surroundingsBonusEarnedAt == nil,
+              today.waterGoalBottles > 0, today.waterBottlesLogged >= today.waterGoalBottles
+        else { return }
+        Task { await DayCoordinator.shared.claimSurroundingsWaterBonus() }
+    }
     private var streakStats: StreakStats { StreakCalculator.calculate(logs: logs) }
     private var foodExposureTotals: FoodExposureTotals {
         FoodExposureCalculator.totals(entries: today?.foodEntries ?? [])
@@ -132,14 +152,12 @@ struct TodayView: View {
                             weather: surroundingsWeather.snapshot,
                             isLoading: surroundingsWeather.isLoading,
                             statusMessage: surroundingsWeather.statusMessage,
-                            bonusEarnedAt: today?.surroundingsBonusEarnedAt,
-                            hydration: SurroundingsHydration(
-                                goalBottles: today?.waterGoalBottles ?? settings.waterGoalBottles,
-                                bottlesLogged: today?.waterBottlesLogged ?? 0,
-                                bottleSizeMl: settings.bottleSizeMl
-                            ),
+                            waterBonusEarnedAt: today?.surroundingsBonusEarnedAt,
+                            waterPending: (waterRemainingAtCheck ?? 0) > 0 && today?.surroundingsBonusEarnedAt == nil,
+                            foodPicks: Set(today?.surroundingsFoodPicks ?? []),
+                            hydration: surroundingsHydration,
                             onRefresh: { surroundingsWeather.refresh() },
-                            onComplete: { await DayCoordinator.shared.claimSurroundingsBonus() }
+                            onPickFood: { await DayCoordinator.shared.claimSurroundingsFoodPick(slot: $0) }
                         )
                     }
 
@@ -277,6 +295,12 @@ struct TodayView: View {
             .onChange(of: settings.surroundingsAwarenessEnabled, initial: true) { _, enabled in
                 surroundingsWeather.setEnabled(enabled)
             }
+            .modifier(SurroundingsWaterWatcher(
+                snapshot: surroundingsWeather.snapshot,
+                waterLogged: today?.waterBottlesLogged,
+                onSnapshot: { waterRemainingAtCheck = $0 == nil ? nil : surroundingsHydration.remainingBottles },
+                onWaterLogged: claimWaterBonusIfFinished
+            ))
             .task {
                 await DayCoordinator.shared.refreshToday()
                 await refreshSteps()

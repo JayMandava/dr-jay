@@ -258,9 +258,10 @@ Optional and off by default in Settings. After enabling, tap Check Weather on
 Today to allow a one-shot foreground location lookup. Open-Meteo receives only
 rounded coordinates and ordinary connection metadata; no health logs are sent.
 Weather remains in memory for at most 30 minutes. Gentle food/hydration ideas
-leave goals, core score, verdict, and streaks unchanged. A self-reported
-suggestion completion earns a separate +1 badge, capped at one per local day,
-with no penalty for skipping. Bonus timestamps persist in version-10 backups.
+leave goals, core score, verdict, and streaks unchanged. Finishing the water
+suggestion earns an automatic +1 (your log reaches the goal after a weather
+check) and each food idea you pick earns +1, for at most +4 per local day, with
+no penalty for skipping. Bonus data persists in version-11 backups.
 See [implementation and verification notes](docs/SURROUNDINGS_AWARENESS.md).
 
 ## Setup

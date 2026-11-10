@@ -58,6 +58,18 @@ final class SurroundingsTests: XCTestCase {
         }
     }
 
+    func testSafetyTipsAreRemindersNotPickableIdeas() throws {
+        for (sample, expectsTip) in [(weather(30), true), (weather(24, humidity: 75), true), (weather(code: 61), true),
+                                     (weather(10), false), (weather(), false)] {
+            let suggestion = try XCTUnwrap(SurroundingsSuggestion.make(weather: sample, now: now))
+            XCTAssertEqual(suggestion.safetyTip != nil, expectsTip, "\(suggestion.kind)")
+            XCTAssertEqual(suggestion.foodPointers(in: .general).count, SurroundingsSuggestion.foodSlotCount)
+            if let tip = suggestion.safetyTip {
+                XCTAssertFalse(suggestion.foodPointers(in: .general).contains(tip))
+            }
+        }
+    }
+
     func testFoodIdeasFollowTheRegionRatherThanOneCuisine() throws {
         let mild = try XCTUnwrap(SurroundingsSuggestion.make(weather: weather(), now: now))
         let south = mild.foodPointers(in: .southAsia).joined(separator: " ")

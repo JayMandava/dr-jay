@@ -28,6 +28,18 @@ struct SurroundingsSuggestion: Equatable, Sendable {
     let title: String
     let detail: String
 
+    /// Every weather group offers this many food ideas; each can be picked once a day.
+    static let foodSlotCount = 3
+
+    /// A food-safety reminder shown with the ideas, not something to pick.
+    var safetyTip: String? {
+        switch kind {
+        case .warm, .humid: "Keep perishable foods chilled until you eat."
+        case .wet: "Keep leftovers chilled and reheat them thoroughly."
+        case .cool, .mild: nil
+        }
+    }
+
     /// Optional examples from the user's area; no allergy or diet profile is inferred.
     func foodPointers(in region: SurroundingsRegion) -> [String] {
         let food = region.foods
@@ -36,7 +48,7 @@ struct SurroundingsSuggestion: Equatable, Sendable {
             return [
                 "Try \(food.produce) with a meal or snack.",
                 "Keep a familiar meal balanced: \(food.homeMeal).",
-                "Keep perishable foods chilled until you eat."
+                "Add \(food.fruit) as a cool snack."
             ]
         case .cool:
             return [
@@ -48,7 +60,7 @@ struct SurroundingsSuggestion: Equatable, Sendable {
             return [
                 "Keep it simple at home with \(food.homeMeal).",
                 "Use \(food.protein) for an easy protein option.",
-                "Keep leftovers chilled and reheat them thoroughly."
+                "Add \(food.fruit) as an easy snack."
             ]
         case .mild:
             return [

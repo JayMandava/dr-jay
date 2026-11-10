@@ -22,7 +22,7 @@ Surroundings Awareness is off by default. Enabling it does not request location 
 
 The app does not track background location. Coordinates and weather are kept only in memory; the app uses an ephemeral network session without a disk cache. Weather expires after 30 minutes. Turning the feature off cancels pending requests and clears its in-memory weather, but cannot undo requests already sent. iOS location permission remains under your control in Settings. The weather provider handles received requests under its own policy.
 
-Suggestions are general comfort ideas, not medical advice, weather alerts, or fluid prescriptions. They do not alter goals, core scores, verdicts, or streaks. Following a suggestion can earn a separate, self-reported +1 bonus at most once per day. Only the bonus completion time is saved in that day's local record and JSON backups, not the location, weather, or suggestion. Turning the feature off hides it without deleting previously earned bonuses. Reset App Data removes them with the rest of your logs.
+Suggestions are general comfort ideas, not medical advice, weather alerts, or fluid prescriptions. They do not alter goals, core scores, verdicts, or streaks. Finishing the water suggestion earns a separate +1, awarded automatically when your water log reaches the day's goal after you check the weather. Each food idea you tap as followed earns a further +1, up to three a day, for a daily maximum of +4. Only the water bonus time and which idea positions (1 to 3) you tapped are saved in that day's local record and JSON backups, not the location, weather, or the idea text. Turning the feature off hides it without deleting previously earned bonuses. Reset App Data removes them with the rest of your logs.
 
 ## Brain Dump
 
