@@ -41,15 +41,55 @@ final class SurroundingsTests: XCTestCase {
         XCTAssertNil(SurroundingsSuggestion.make(weather: previous, now: midnight.addingTimeInterval(60)))
     }
 
-    func testEveryWeatherBranchOffersFourDistinctFoodChoices() throws {
+    private let allRegions: [SurroundingsRegion] = [
+        .southAsia, .eastAsia, .southeastAsia, .middleEastNorthAfrica, .europe,
+        .subSaharanAfrica, .northAmerica, .latinAmerica, .oceania, .general
+    ]
+
+    func testEveryWeatherBranchInEveryRegionOffersThreeDistinctFoodChoices() throws {
         for sample in [weather(30), weather(24, humidity: 75), weather(10), weather(code: 61), weather()] {
             let suggestion = try XCTUnwrap(SurroundingsSuggestion.make(weather: sample, now: now))
-            XCTAssertEqual(suggestion.foodPointers.count, 4)
-            XCTAssertEqual(Set(suggestion.foodPointers).count, 4)
-            XCTAssertTrue(suggestion.foodPointers.allSatisfy { !$0.isEmpty && $0.count < 100 })
+            for region in allRegions {
+                let pointers = suggestion.foodPointers(in: region)
+                XCTAssertEqual(pointers.count, 3, "\(suggestion.kind) \(region)")
+                XCTAssertEqual(Set(pointers).count, 3, "\(suggestion.kind) \(region)")
+                XCTAssertTrue(pointers.allSatisfy { !$0.isEmpty && $0.count < 120 }, "\(suggestion.kind) \(region)")
+            }
         }
-        XCTAssertTrue(try XCTUnwrap(SurroundingsSuggestion.make(weather: weather(30), now: now)).foodPointers[0].contains("cucumber"))
-        XCTAssertTrue(try XCTUnwrap(SurroundingsSuggestion.make(weather: weather(10), now: now)).foodPointers[0].contains("warm"))
+    }
+
+    func testFoodIdeasFollowTheRegionRatherThanOneCuisine() throws {
+        let mild = try XCTUnwrap(SurroundingsSuggestion.make(weather: weather(), now: now))
+        let south = mild.foodPointers(in: .southAsia).joined(separator: " ")
+        let east = mild.foodPointers(in: .eastAsia).joined(separator: " ")
+        let europe = mild.foodPointers(in: .europe).joined(separator: " ")
+        XCTAssertTrue(south.contains("dal"))
+        XCTAssertTrue(east.contains("tofu"))
+        XCTAssertTrue(europe.contains("potatoes"))
+        XCTAssertFalse(europe.contains("dal"))
+        XCTAssertFalse(east.contains("roti"))
+        XCTAssertEqual(Set(allRegions.map { mild.foodPointers(in: $0) }).count, allRegions.count)
+    }
+
+    func testRegionComesFromRoundedCoordinates() {
+        let cases: [(Double, Double, SurroundingsRegion)] = [
+            (19.1, 72.9, .southAsia), (35.7, 139.7, .eastAsia), (13.8, 100.5, .southeastAsia),
+            (30.0, 31.2, .middleEastNorthAfrica), (48.9, 2.4, .europe), (-1.3, 36.8, .subSaharanAfrica),
+            (40.7, -74.0, .northAmerica), (-23.5, -46.6, .latinAmerica), (-33.9, 151.2, .oceania),
+            (-41.3, 174.8, .oceania), (0.0, -30.0, .general)
+        ]
+        for (lat, lon, expected) in cases {
+            XCTAssertEqual(SurroundingsRegion(latitude: lat, longitude: lon), expected, "\(lat),\(lon)")
+        }
+        XCTAssertEqual(SurroundingsRegion(latitude: .nan, longitude: 10), .general)
+    }
+
+    func testWeatherRegionDefaultsToGeneralAndDoesNotChangeTheSuggestionKind() throws {
+        XCTAssertEqual(weather().region, .general)
+        var tokyo = weather(30)
+        tokyo.region = .eastAsia
+        XCTAssertEqual(SurroundingsSuggestion.make(weather: tokyo, now: now)?.kind,
+                       SurroundingsSuggestion.make(weather: weather(30), now: now)?.kind)
     }
 
     func testHydrationUsesExistingGoalAndBottleSize() {

@@ -55,7 +55,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Surroundings")
                 } footer: {
-                    SettingsFootnote("Off by default. Check Weather on Today shares your approximate location and IP address with Open-Meteo. No health logs are sent. Details in Privacy Policy below.")
+                    SettingsFootnote("Off by default. Check Weather on Today shares your approximate location and IP address with Open-Meteo. No health logs are sent. The same area also picks food examples on your device. Details in Privacy Policy below.")
                 }
 
                 Section("Apple Health") {

@@ -7,6 +7,8 @@ struct SurroundingsWeather: Equatable, Sendable {
     let humidityPercent: Double
     let weatherCode: Int
     let observedAt: Date
+    /// Coarse area only, derived on device; coordinates are never kept.
+    var region: SurroundingsRegion = .general
 
     func isUsable(at now: Date) -> Bool {
         let age = now.timeIntervalSince(observedAt)
@@ -26,36 +28,33 @@ struct SurroundingsSuggestion: Equatable, Sendable {
     let title: String
     let detail: String
 
-    /// Optional choices; no allergy or diet profile is inferred.
-    var foodPointers: [String] {
+    /// Optional examples from the user's area; no allergy or diet profile is inferred.
+    func foodPointers(in region: SurroundingsRegion) -> [String] {
+        let food = region.foods
         switch kind {
         case .warm, .humid:
             return [
-                "Try cucumber or watermelon with a meal or snack.",
-                "Choose curd or an unsweetened dairy-free alternative if it suits you.",
-                "Keep a familiar meal balanced: rice or roti, dal and vegetables.",
+                "Try \(food.produce) with a meal or snack.",
+                "Keep a familiar meal balanced: \(food.homeMeal).",
                 "Keep perishable foods chilled until you eat."
             ]
         case .cool:
             return [
-                "Try a warm vegetable or lentil soup.",
-                "Choose porridge or oats for a warm, easy meal.",
-                "Pair rice or roti with dal and cooked vegetables.",
-                "Add a fruit you enjoy as an optional snack."
+                "Try \(food.warmDish).",
+                "Build a warm meal around \(food.homeMeal).",
+                "Add \(food.fruit) as an optional snack."
             ]
         case .wet:
             return [
-                "Try a simple home meal such as khichdi with vegetables.",
-                "Use beans or lentils for an easy protein option.",
-                "Add cooked vegetables or washed fruit you enjoy.",
+                "Keep it simple at home with \(food.homeMeal).",
+                "Use \(food.protein) for an easy protein option.",
                 "Keep leftovers chilled and reheat them thoroughly."
             ]
         case .mild:
             return [
-                "Build a meal around rice or roti, dal and vegetables.",
-                "Choose a fruit you enjoy for a snack.",
-                "Try beans, lentils or another familiar protein with your meal.",
-                "Prepare a simple meal ahead if your day is busy."
+                "Build a meal around \(food.homeMeal).",
+                "Choose \(food.fruit) for a snack.",
+                "Try \(food.protein) with your meal."
             ]
         }
     }
@@ -108,5 +107,81 @@ struct SurroundingsHydration: Equatable, Sendable {
         guard remainingBottles > 0 else { return "Weather hasn’t increased your goal. Follow your personal fluid guidance." }
         let size = bottleSizeMl > 0 ? " · \(bottleSizeMl) ml each" : ""
         return "\(max(0, bottlesLogged)) of \(goalBottles) bottles logged\(size). Spread the remainder through the day as suits you."
+    }
+}
+
+/// Coarse area used only to pick familiar example foods. Boxes are approximate
+/// on purpose: a border town may get its neighbour's examples, which is harmless.
+enum SurroundingsRegion: Equatable, Sendable {
+    case southAsia, eastAsia, southeastAsia, middleEastNorthAfrica, europe
+    case subSaharanAfrica, northAmerica, latinAmerica, oceania, general
+
+    init(latitude: Double, longitude: Double) {
+        func inside(_ lat: ClosedRange<Double>, _ lon: ClosedRange<Double>) -> Bool {
+            lat.contains(latitude) && lon.contains(longitude)
+        }
+        if inside(5 ... 37, 60 ... 92) { self = .southAsia }
+        else if inside(22 ... 54, 100 ... 146) { self = .eastAsia }
+        else if inside(-11 ... 22, 92 ... 141) { self = .southeastAsia }
+        else if inside(12 ... 36, -18 ... 60) { self = .middleEastNorthAfrica }
+        else if inside(36 ... 72, -25 ... 45) { self = .europe }
+        else if inside(-35 ... 12, -18 ... 52) { self = .subSaharanAfrica }
+        else if inside(24 ... 84, -168 ... -52) { self = .northAmerica }
+        else if inside(-56 ... 24, -120 ... -34) { self = .latinAmerica }
+        else if inside(-44 ... -10, 112 ... 154) || inside(-47 ... -34, 166 ... 179) { self = .oceania }
+        else { self = .general }
+    }
+
+    struct Foods {
+        let produce: String
+        let warmDish: String
+        let homeMeal: String
+        let protein: String
+        let fruit: String
+    }
+
+    var foods: Foods {
+        switch self {
+        case .southAsia:
+            Foods(produce: "cucumber or watermelon", warmDish: "a vegetable or lentil soup",
+                  homeMeal: "rice or roti with dal and vegetables", protein: "dal, chickpeas or beans",
+                  fruit: "banana or guava")
+        case .eastAsia:
+            Foods(produce: "cucumber or winter melon", warmDish: "miso, congee or a clear vegetable soup",
+                  homeMeal: "rice or noodles with vegetables and tofu, egg or fish",
+                  protein: "tofu, edamame or fish", fruit: "pear or mandarin")
+        case .southeastAsia:
+            Foods(produce: "cucumber or pineapple", warmDish: "a light vegetable or noodle soup",
+                  homeMeal: "rice with stir-fried vegetables and fish, egg or tofu",
+                  protein: "tofu, tempeh or fish", fruit: "banana or papaya")
+        case .middleEastNorthAfrica:
+            Foods(produce: "cucumber, tomato or melon", warmDish: "a lentil or vegetable soup",
+                  homeMeal: "rice or flatbread with vegetables and chickpeas",
+                  protein: "chickpeas, lentils or fish", fruit: "dates or oranges")
+        case .europe:
+            Foods(produce: "a crisp salad or melon", warmDish: "a vegetable or bean soup",
+                  homeMeal: "potatoes, pasta or wholegrain bread with vegetables",
+                  protein: "beans, eggs or fish", fruit: "an apple or pear")
+        case .subSaharanAfrica:
+            Foods(produce: "cucumber or watermelon", warmDish: "a vegetable or bean stew",
+                  homeMeal: "maize, cassava or rice with beans and greens",
+                  protein: "beans, lentils or fish", fruit: "mango or banana")
+        case .northAmerica:
+            Foods(produce: "cucumber or melon", warmDish: "a vegetable or bean soup",
+                  homeMeal: "wholegrain bread, rice or potatoes with vegetables",
+                  protein: "beans, eggs or chicken", fruit: "an apple or berries")
+        case .latinAmerica:
+            Foods(produce: "cucumber or watermelon", warmDish: "a vegetable or bean soup",
+                  homeMeal: "rice, corn tortillas or potatoes with beans and vegetables",
+                  protein: "beans, eggs or fish", fruit: "banana or papaya")
+        case .oceania:
+            Foods(produce: "cucumber or watermelon", warmDish: "a vegetable soup",
+                  homeMeal: "wholegrain bread, rice or potatoes with vegetables",
+                  protein: "beans, eggs or fish", fruit: "an apple or citrus")
+        case .general:
+            Foods(produce: "cucumber or watermelon", warmDish: "a vegetable or bean soup",
+                  homeMeal: "rice, bread or potatoes with vegetables",
+                  protein: "beans, lentils or eggs", fruit: "a fruit you enjoy")
+        }
     }
 }

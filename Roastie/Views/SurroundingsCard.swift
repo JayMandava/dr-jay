@@ -10,6 +10,7 @@ struct SurroundingsCard: View {
     let onComplete: () async -> Bool
     @State private var isSaving = false
     @State private var saveError = false
+    @State private var showFoodIdeas = false
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
@@ -23,14 +24,21 @@ struct SurroundingsCard: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                     Text(hydration.title).font(.subheadline.weight(.semibold))
                     Text(hydration.detail).font(.subheadline)
-                    Text("Food ideas · choose what suits you")
-                        .font(.subheadline.weight(.semibold))
-                    ForEach(suggestion.foodPointers, id: \.self) { pointer in
-                        HStack(alignment: .top, spacing: 8) {
-                            Text("•").accessibilityHidden(true)
-                            Text(pointer).fixedSize(horizontal: false, vertical: true)
+                    DisclosureGroup(isExpanded: $showFoodIdeas) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(suggestion.foodPointers(in: weather.region), id: \.self) { pointer in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("•").accessibilityHidden(true)
+                                    Text(pointer).fixedSize(horizontal: false, vertical: true)
+                                }
+                                .font(.subheadline)
+                            }
+                            Text("Examples only. Check ingredients against your diet and allergies.")
+                                .font(.caption).foregroundStyle(.secondary)
                         }
-                        .font(.subheadline)
+                        .padding(.top, 6)
+                    } label: {
+                        Text("Food ideas near you").font(.subheadline.weight(.semibold))
                     }
                     if earnedToday {
                         Label("Suggestion bonus +1 today", systemImage: "checkmark.circle")
@@ -80,7 +88,7 @@ struct SurroundingsCard: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(isLoading || isSaving)
-                Text("Optional · +1 max per day, separate from your score. Choose foods that fit your dietary needs and allergies. Personal fluid guidance takes priority.")
+                Text("Optional · Up to +1 a day, separate from your score. Follow your personal fluid and dietary guidance.")
                     .font(.caption).foregroundStyle(.secondary)
                 Link("Weather by Open-Meteo · CC BY 4.0", destination: URL(string: "https://open-meteo.com/")!)
                     .font(.caption)
