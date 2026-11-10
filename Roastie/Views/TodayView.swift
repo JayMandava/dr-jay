@@ -133,6 +133,11 @@ struct TodayView: View {
                             isLoading: surroundingsWeather.isLoading,
                             statusMessage: surroundingsWeather.statusMessage,
                             bonusEarnedAt: today?.surroundingsBonusEarnedAt,
+                            hydration: SurroundingsHydration(
+                                goalBottles: today?.waterGoalBottles ?? settings.waterGoalBottles,
+                                bottlesLogged: today?.waterBottlesLogged ?? 0,
+                                bottleSizeMl: settings.bottleSizeMl
+                            ),
                             onRefresh: { surroundingsWeather.refresh() },
                             onComplete: { await DayCoordinator.shared.claimSurroundingsBonus() }
                         )

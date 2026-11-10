@@ -28,8 +28,11 @@ It adds no modal and leaves the corrected sheet presentations unchanged.
 - Coordinates and weather are not persisted. Cache expires after 30 minutes
   and cannot be reused on a different local calendar day. Requests time out;
   disable cancels them, clears weather, and ignores stale callbacks.
-- Suggestions use deterministic gentle text for warm, humid, cool, wet, or
-  mild weather. No disease prevention, medical benefit, fixed extra water,
+- Suggestions use four deterministic, optional food pointers for warm, humid,
+  cool, wet, or mild weather. The card reads today’s saved water goal and logged
+  bottles, plus the configured bottle size, to show remaining bottles and ml.
+  It shows a goal-met state at or above the target and never adds weather-based
+  water. Foods are examples, not inferred allergy/diet personalization. No disease prevention, medical benefit, fixed extra water,
   dietary restriction, or goal change is claimed. User-specific fluid and
   dietary guidance takes precedence.
 - Following an idea is self-reported. The explicit completion button stores

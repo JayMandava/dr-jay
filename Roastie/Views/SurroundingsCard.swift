@@ -5,6 +5,7 @@ struct SurroundingsCard: View {
     let isLoading: Bool
     let statusMessage: String?
     let bonusEarnedAt: Date?
+    let hydration: SurroundingsHydration
     let onRefresh: () -> Void
     let onComplete: () async -> Bool
     @State private var isSaving = false
@@ -20,8 +21,17 @@ struct SurroundingsCard: View {
                 if let weather, let suggestion {
                     Text("Nearby · \(weather.temperatureC.formatted(.number.precision(.fractionLength(0))))°C · feels like \(weather.apparentTemperatureC.formatted(.number.precision(.fractionLength(0))))°C")
                         .font(.subheadline).foregroundStyle(.secondary)
-                    Text(suggestion.title).font(.subheadline.weight(.semibold))
-                    Text(suggestion.detail).font(.subheadline)
+                    Text(hydration.title).font(.subheadline.weight(.semibold))
+                    Text(hydration.detail).font(.subheadline)
+                    Text("Food ideas · choose what suits you")
+                        .font(.subheadline.weight(.semibold))
+                    ForEach(suggestion.foodPointers, id: \.self) { pointer in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("•").accessibilityHidden(true)
+                            Text(pointer).fixedSize(horizontal: false, vertical: true)
+                        }
+                        .font(.subheadline)
+                    }
                     if earnedToday {
                         Label("Suggestion bonus +1 today", systemImage: "checkmark.circle")
                             .font(.subheadline.weight(.semibold))
@@ -41,11 +51,11 @@ struct SurroundingsCard: View {
                                 isSaving = false
                             }
                         } label: {
-                            Label(isSaving ? "Saving…" : "I did this", systemImage: "checkmark")
+                            Label(isSaving ? "Saving…" : "I followed an idea", systemImage: "checkmark")
                                 .font(.subheadline.weight(.semibold))
                         }
                         .buttonStyle(.bordered)
-                        .accessibilityLabel(isSaving ? "Saving…" : "I did this suggestion")
+                        .accessibilityLabel(isSaving ? "Saving…" : "I followed one of these ideas")
                         .disabled(isSaving)
                     }
                     Text("Updated \(weather.observedAt.formatted(date: .omitted, time: .shortened))")
@@ -70,7 +80,7 @@ struct SurroundingsCard: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(isLoading || isSaving)
-                Text("Optional · +1 max per day, separate from your score. Follow your personal fluid and dietary guidance.")
+                Text("Optional · +1 max per day, separate from your score. Choose foods that fit your dietary needs and allergies. Personal fluid guidance takes priority.")
                     .font(.caption).foregroundStyle(.secondary)
                 Link("Weather by Open-Meteo · CC BY 4.0", destination: URL(string: "https://open-meteo.com/")!)
                     .font(.caption)
