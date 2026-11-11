@@ -261,7 +261,7 @@ Weather remains in memory for at most 30 minutes. Gentle food/hydration ideas
 leave goals, core score, verdict, and streaks unchanged. Finishing the water
 suggestion earns an automatic +1 (your log reaches the goal after a weather
 check) and each food idea you pick earns +1, for at most +4 per local day, with
-no penalty for skipping. Bonus data persists in version-11 backups.
+no penalty for skipping. Bonus data persists in version-12 backups.
 See [implementation and verification notes](docs/SURROUNDINGS_AWARENESS.md).
 
 ## Setup

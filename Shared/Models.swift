@@ -199,8 +199,11 @@ final class DailyLog {
     /// Optional so existing stores migrate without inferred bonus history.
     /// When the water suggestion was finished (the day's bottles reached the goal).
     var surroundingsBonusEarnedAt: Date?
-    /// Which of the day's food idea slots (0..<3) were picked; slots, not text.
+    /// Superseded by `surroundingsFoodIdeas`; unused, kept so existing stores open unchanged.
     var surroundingsFoodPicks: [Int]?
+    /// Text of the food ideas followed today (at most 3), so they stay checked
+    /// after the weather, and therefore the suggested list, changes.
+    var surroundingsFoodIdeas: [String]?
 
     init(dayKey: String, date: Date, waterGoalBottles: Int) {
         self.dayKey = dayKey
@@ -221,6 +224,7 @@ final class DailyLog {
         self.exposureEntries = []
         self.surroundingsBonusEarnedAt = nil
         self.surroundingsFoodPicks = nil
+        self.surroundingsFoodIdeas = nil
     }
 
     /// Coverage and score are derived, not an additional persisted source of truth.

@@ -6,10 +6,10 @@ struct SurroundingsCard: View {
     let statusMessage: String?
     let waterBonusEarnedAt: Date?
     let waterPending: Bool
-    let foodPicks: Set<Int>
+    let foodPicks: [String]
     let hydration: SurroundingsHydration
     let onRefresh: () -> Void
-    let onPickFood: (Int) async -> Bool
+    let onPickFood: (String) async -> Bool
     @State private var isSaving = false
     @State private var saveError = false
     @State private var showFoodIdeas = false
@@ -37,10 +37,11 @@ struct SurroundingsCard: View {
                     }
                     DisclosureGroup(isExpanded: $showFoodIdeas) {
                         VStack(alignment: .leading, spacing: 10) {
-                            ForEach(Array(suggestion.foodPointers(in: weather.region).enumerated()), id: \.offset) { slot, pointer in
-                                let picked = foodPicks.contains(slot)
+                            let pointers = suggestion.foodPointers(in: weather.region)
+                            ForEach(pointers, id: \.self) { pointer in
+                                let picked = foodPicks.contains(pointer)
                                 Button {
-                                    pick(slot, weather: weather, alreadyPicked: picked)
+                                    pick(pointer, weather: weather, alreadyPicked: picked)
                                 } label: {
                                     HStack(alignment: .top, spacing: 8) {
                                         Image(systemName: picked ? "checkmark.circle.fill" : "circle")
@@ -54,10 +55,11 @@ struct SurroundingsCard: View {
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .disabled(isSaving)
+                                .disabled(isSaving || (!picked && foodPicks.count >= SurroundingsSuggestion.foodSlotCount))
                                 .accessibilityAddTraits(picked ? .isSelected : [])
                                 .accessibilityHint(picked ? "Already counted today" : "Counts this idea as followed")
                             }
+                            followedIdeas(excluding: pointers)
                             Text("Tap an idea you followed to earn +1. Examples only; check ingredients against your diet and allergies.")
                                 .font(.caption).foregroundStyle(.secondary)
                             if let tip = suggestion.safetyTip {
@@ -73,6 +75,7 @@ struct SurroundingsCard: View {
                 } else {
                     Text("Check weather for a food or hydration idea.")
                         .font(.subheadline).foregroundStyle(.secondary)
+                    followedIdeas(excluding: [])
                     if bonusToday > 0 {
                         Text("Bonus today +\(bonusToday)").font(.subheadline.weight(.semibold))
                     }
@@ -102,14 +105,35 @@ struct SurroundingsCard: View {
         }
     }
 
-    private func pick(_ slot: Int, weather: SurroundingsWeather, alreadyPicked: Bool) {
+    /// Ideas already counted today that the current list no longer shows, e.g.
+    /// after the weather changed or expired. They stay visible and checked.
+    @ViewBuilder
+    private func followedIdeas(excluding shown: [String]) -> some View {
+        let hidden = foodPicks.filter { !shown.contains($0) }
+        if !hidden.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Followed today").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                ForEach(hidden, id: \.self) { idea in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(DrJayTheme.primary)
+                        Text(idea).fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.subheadline)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isSelected)
+                }
+            }
+        }
+    }
+
+    private func pick(_ idea: String, weather: SurroundingsWeather, alreadyPicked: Bool) {
         guard !alreadyPicked, !isSaving else { return }
         isSaving = true
         saveError = false
         Task {
             // Recheck freshness at the tap, not just at the last timeline update.
             if weather.isUsable(at: .now) {
-                saveError = !(await onPickFood(slot))
+                saveError = !(await onPickFood(idea))
             } else {
                 saveError = true
             }
