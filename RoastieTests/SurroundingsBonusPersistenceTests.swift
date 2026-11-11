@@ -47,7 +47,7 @@ final class SurroundingsBonusPersistenceTests: XCTestCase {
             let coordinator = DayCoordinator(context: context)
             setAwareness(false)
             let disabledWater = await coordinator.claimSurroundingsWaterBonus()
-            let disabledFood = await coordinator.claimSurroundingsFoodPick(slot: 0)
+            let disabledFood = await coordinator.claimSurroundingsFoodPick(idea: "Idea")
             XCTAssertFalse(disabledWater)
             XCTAssertFalse(disabledFood)
             XCTAssertTrue(try context.fetch(FetchDescriptor<DailyLog>()).isEmpty)
@@ -100,7 +100,7 @@ final class SurroundingsBonusPersistenceTests: XCTestCase {
     }
 
     @MainActor
-    func testFoodPicksCountOncePerSlotAndPersist() async throws {
+    func testFoodPicksCountOncePerIdeaAndPersist() async throws {
         setAwareness(true)
         let url = try storeURL("food.store")
         let today = Date().dayKey
@@ -108,28 +108,49 @@ final class SurroundingsBonusPersistenceTests: XCTestCase {
             let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(url: url))
             let context = ModelContext(container)
             let coordinator = DayCoordinator(context: context)
-            let second = await coordinator.claimSurroundingsFoodPick(slot: 1)
-            let repeated = await coordinator.claimSurroundingsFoodPick(slot: 1)
-            let first = await coordinator.claimSurroundingsFoodPick(slot: 0)
+            let second = await coordinator.claimSurroundingsFoodPick(idea: "Dal and rice")
+            let repeated = await coordinator.claimSurroundingsFoodPick(idea: " Dal and rice ")
+            let first = await coordinator.claimSurroundingsFoodPick(idea: "Add a banana as a cool snack.")
             XCTAssertTrue(second)
             XCTAssertFalse(repeated)
             XCTAssertTrue(first)
-            for invalid in [-1, 3, Int.max, Int.min] {
-                let result = await coordinator.claimSurroundingsFoodPick(slot: invalid)
+            for invalid in ["", "   ", String(repeating: "x", count: 201)] {
+                let result = await coordinator.claimSurroundingsFoodPick(idea: invalid)
                 XCTAssertFalse(result)
             }
             let logs = try context.fetch(FetchDescriptor<DailyLog>())
-            XCTAssertEqual(logs.first { $0.dayKey == today }?.surroundingsFoodPicks, [0, 1])
+            XCTAssertEqual(logs.first { $0.dayKey == today }?.surroundingsFoodIdeas, ["Dal and rice", "Add a banana as a cool snack."])
             XCTAssertNil(logs.first { $0.dayKey == today }?.surroundingsBonusEarnedAt)
         }
         do {
             let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(url: url))
             let context = ModelContext(container)
             let logs = try context.fetch(FetchDescriptor<DailyLog>())
-            XCTAssertEqual(logs.first { $0.dayKey == today }?.surroundingsFoodPicks, [0, 1])
-            let again = await DayCoordinator(context: context).claimSurroundingsFoodPick(slot: 0)
+            XCTAssertEqual(logs.first { $0.dayKey == today }?.surroundingsFoodIdeas, ["Dal and rice", "Add a banana as a cool snack."])
+            let again = await DayCoordinator(context: context).claimSurroundingsFoodPick(idea: "Dal and rice")
             XCTAssertFalse(again)
         }
+    }
+
+    /// A pick must stay counted when a later weather check suggests different ideas,
+    /// and a day can never exceed the food cap however many ideas are tried.
+    @MainActor
+    func testPickSurvivesWeatherChangeAndIsCapped() async throws {
+        setAwareness(true)
+        let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let context = ModelContext(container)
+        let coordinator = DayCoordinator(context: context)
+        let warm = SurroundingsSuggestion(kind: .warm, title: "", detail: "").foodPointers(in: .southAsia)
+        let cool = SurroundingsSuggestion(kind: .cool, title: "", detail: "").foodPointers(in: .southAsia)
+        let picked = try XCTUnwrap(warm.first)
+        let claimed = await coordinator.claimSurroundingsFoodPick(idea: picked)
+        XCTAssertTrue(claimed)
+        for idea in cool + warm {
+            _ = await coordinator.claimSurroundingsFoodPick(idea: idea)
+        }
+        let log = try XCTUnwrap(try context.fetch(FetchDescriptor<DailyLog>()).first)
+        XCTAssertEqual(log.surroundingsFoodIdeas?.count, SurroundingsSuggestion.foodSlotCount)
+        XCTAssertEqual(log.surroundingsFoodIdeas?.first, picked)
     }
 
     @MainActor
@@ -156,11 +177,11 @@ final class SurroundingsBonusPersistenceTests: XCTestCase {
         let waterProgress = log.waterProgress
         let coordinator = DayCoordinator(context: context)
         let water = await coordinator.claimSurroundingsWaterBonus()
-        let food = await coordinator.claimSurroundingsFoodPick(slot: 2)
+        let food = await coordinator.claimSurroundingsFoodPick(idea: "Idea")
         XCTAssertTrue(water)
         XCTAssertTrue(food)
         XCTAssertNotNil(log.surroundingsBonusEarnedAt)
-        XCTAssertEqual(log.surroundingsFoodPicks, [2])
+        XCTAssertEqual(log.surroundingsFoodIdeas, ["Idea"])
         XCTAssertEqual(profiles.map { summary($0) }, before)
         XCTAssertEqual(StreakCalculator.calculate(logs: [log], referenceDate: now), streak)
         XCTAssertEqual(log.sleepGoalMet, sleepGoalMet)
@@ -185,10 +206,10 @@ final class SurroundingsBonusPersistenceTests: XCTestCase {
         let log = try XCTUnwrap(try context.fetch(FetchDescriptor<DailyLog>()).first)
         let coordinator = DayCoordinator(context: context)
         let water = await coordinator.claimSurroundingsWaterBonus()
-        let food = await coordinator.claimSurroundingsFoodPick(slot: 0)
+        let food = await coordinator.claimSurroundingsFoodPick(idea: "Idea")
         XCTAssertFalse(water)
         XCTAssertFalse(food)
         XCTAssertNil(log.surroundingsBonusEarnedAt)
-        XCTAssertNil(log.surroundingsFoodPicks)
+        XCTAssertNil(log.surroundingsFoodIdeas)
     }
 }

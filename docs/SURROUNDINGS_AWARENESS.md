@@ -44,16 +44,19 @@ It adds no modal and leaves the corrected sheet presentations unchanged.
   how many bottles are left (in memory only). The +1 is awarded when today's
   log reaches the goal after that, and the coordinator re-verifies the log.
   If the goal was already met at the check, there is no water bonus.
-- Food is picked per idea. Tapping an idea stores its position (0 to 2) on
-  today's DailyLog, so each idea earns +1 once per day regardless of its text.
-  Food-safety reminders are shown but are not pickable.
+- Food is picked per idea. Tapping an idea stores that idea's text on today's
+  DailyLog (at most three), so a pick stays checked after a later weather check
+  suggests different ideas, and it stays visible under "Followed today" when
+  the weather has expired. Each idea earns +1 once per day. Food-safety
+  reminders are shown but are not pickable.
 - A day can earn at most +4 (water +1, three food ideas +1 each), always
   separate from the score and never a penalty for skipping.
 - Core score, verdict, weights, goals, streaks, exposure penalties, model
   prompts, notifications, widgets, and Live Activities are unchanged.
-- Backup version 11 includes only the water bonus timestamp and the picked
-  idea positions, not location, weather, or suggestion text. Older backups
-  decode with no bonus, and restored positions are limited to 0 to 2.
+- Backup version 12 includes only the water bonus timestamp and the text of
+  the ideas you picked, not location or weather. Older backups decode with no
+  bonus (version 11 position picks are dropped), and restored ideas are
+  trimmed, distinct, and limited to three.
 - Disable hides the feature but preserves any already-earned bonus.
   Reset App Data deletes it with the log.
 

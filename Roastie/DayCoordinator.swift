@@ -70,15 +70,17 @@ final class DayCoordinator {
         }
     }
 
-    /// Food bonus: +1 for each distinct idea slot picked today.
+    /// Food bonus: +1 for each distinct idea followed today, up to `foodSlotCount`.
     @discardableResult
-    public func claimSurroundingsFoodPick(slot: Int) async -> Bool {
-        guard (0..<SurroundingsSuggestion.foodSlotCount).contains(slot) else { return false }
+    public func claimSurroundingsFoodPick(idea: String) async -> Bool {
+        let idea = idea.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !idea.isEmpty, idea.count <= 200 else { return false }
         return await claimSurroundings { log, _ in
-            let previous = log.surroundingsFoodPicks
-            guard !(previous ?? []).contains(slot) else { return nil }
-            log.surroundingsFoodPicks = ((previous ?? []) + [slot]).sorted()
-            return { log.surroundingsFoodPicks = previous }
+            let previous = log.surroundingsFoodIdeas
+            guard !(previous ?? []).contains(idea),
+                  (previous ?? []).count < SurroundingsSuggestion.foodSlotCount else { return nil }
+            log.surroundingsFoodIdeas = (previous ?? []) + [idea]
+            return { log.surroundingsFoodIdeas = previous }
         }
     }
 

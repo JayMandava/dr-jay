@@ -154,10 +154,10 @@ struct TodayView: View {
                             statusMessage: surroundingsWeather.statusMessage,
                             waterBonusEarnedAt: today?.surroundingsBonusEarnedAt,
                             waterPending: (waterRemainingAtCheck ?? 0) > 0 && today?.surroundingsBonusEarnedAt == nil,
-                            foodPicks: Set(today?.surroundingsFoodPicks ?? []),
+                            foodPicks: today?.surroundingsFoodIdeas ?? [],
                             hydration: surroundingsHydration,
                             onRefresh: { surroundingsWeather.refresh() },
-                            onPickFood: { await DayCoordinator.shared.claimSurroundingsFoodPick(slot: $0) }
+                            onPickFood: { await DayCoordinator.shared.claimSurroundingsFoodPick(idea: $0) }
                         )
                     }
 
