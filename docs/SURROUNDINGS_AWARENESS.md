@@ -34,7 +34,11 @@ It adds no modal and leaves the corrected sheet presentations unchanged.
 - Food ideas sit in a collapsed "Food ideas near you" section so the card
   stays short. Three examples come from the weather group (warm or humid,
   cool, wet, mild) and a broad region chosen on device from the rounded
-  coordinates (nine regions plus a general fallback). The region is not
+  coordinates (nine regions plus a general fallback). Each region has four
+  sets of actual foods, rotated once per local civil day. Repeated renders,
+  relaunches, and same-day checks with the same weather group/region keep
+  the same choices. A weather-group or region change can change them sooner.
+  The region is not
   stored or sent anywhere. Region boxes are approximate; a border area may
   get a neighbour's examples. No allergy or diet profile is inferred.
 - No disease prevention, medical benefit, fixed extra water, dietary

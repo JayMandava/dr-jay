@@ -37,7 +37,7 @@ struct SurroundingsCard: View {
                     }
                     DisclosureGroup(isExpanded: $showFoodIdeas) {
                         VStack(alignment: .leading, spacing: 10) {
-                            let pointers = suggestion.foodPointers(in: weather.region)
+                            let pointers = suggestion.foodPointers(in: weather.region, on: context.date)
                             ForEach(pointers, id: \.self) { pointer in
                                 let picked = foodPicks.contains(pointer)
                                 Button {

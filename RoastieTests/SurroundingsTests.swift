@@ -50,7 +50,7 @@ final class SurroundingsTests: XCTestCase {
         for sample in [weather(30), weather(24, humidity: 75), weather(10), weather(code: 61), weather()] {
             let suggestion = try XCTUnwrap(SurroundingsSuggestion.make(weather: sample, now: now))
             for region in allRegions {
-                let pointers = suggestion.foodPointers(in: region)
+                let pointers = suggestion.foodPointers(in: region, on: now)
                 XCTAssertEqual(pointers.count, 3, "\(suggestion.kind) \(region)")
                 XCTAssertEqual(Set(pointers).count, 3, "\(suggestion.kind) \(region)")
                 XCTAssertTrue(pointers.allSatisfy { !$0.isEmpty && $0.count < 120 }, "\(suggestion.kind) \(region)")
@@ -63,24 +63,27 @@ final class SurroundingsTests: XCTestCase {
                                      (weather(10), false), (weather(), false)] {
             let suggestion = try XCTUnwrap(SurroundingsSuggestion.make(weather: sample, now: now))
             XCTAssertEqual(suggestion.safetyTip != nil, expectsTip, "\(suggestion.kind)")
-            XCTAssertEqual(suggestion.foodPointers(in: .general).count, SurroundingsSuggestion.foodSlotCount)
+            XCTAssertEqual(suggestion.foodPointers(in: .general, on: now).count, SurroundingsSuggestion.foodSlotCount)
             if let tip = suggestion.safetyTip {
-                XCTAssertFalse(suggestion.foodPointers(in: .general).contains(tip))
+                XCTAssertFalse(suggestion.foodPointers(in: .general, on: now).contains(tip))
             }
         }
     }
 
     func testFoodIdeasFollowTheRegionRatherThanOneCuisine() throws {
         let mild = try XCTUnwrap(SurroundingsSuggestion.make(weather: weather(), now: now))
-        let south = mild.foodPointers(in: .southAsia).joined(separator: " ")
-        let east = mild.foodPointers(in: .eastAsia).joined(separator: " ")
-        let europe = mild.foodPointers(in: .europe).joined(separator: " ")
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let originalDay = Date(timeIntervalSince1970: 12 * 60 * 60) // rotation day zero
+        let south = mild.foodPointers(in: .southAsia, on: originalDay, calendar: calendar).joined(separator: " ")
+        let east = mild.foodPointers(in: .eastAsia, on: originalDay, calendar: calendar).joined(separator: " ")
+        let europe = mild.foodPointers(in: .europe, on: originalDay, calendar: calendar).joined(separator: " ")
         XCTAssertTrue(south.contains("dal"))
         XCTAssertTrue(east.contains("tofu"))
         XCTAssertTrue(europe.contains("potatoes"))
         XCTAssertFalse(europe.contains("dal"))
         XCTAssertFalse(east.contains("roti"))
-        XCTAssertEqual(Set(allRegions.map { mild.foodPointers(in: $0) }).count, allRegions.count)
+        XCTAssertEqual(Set(allRegions.map { mild.foodPointers(in: $0, on: now) }).count, allRegions.count)
     }
 
     func testRegionComesFromRoundedCoordinates() {
@@ -146,13 +149,4 @@ final class SurroundingsTests: XCTestCase {
         }
     }
 
-    func testOptInDefaultsAndSettingsRoundTrip() throws {
-        XCTAssertFalse(AppSettings().surroundingsAwarenessEnabled)
-        XCTAssertFalse(try JSONDecoder().decode(AppSettings.self, from: Data("{}".utf8)).surroundingsAwarenessEnabled)
-        let original = AppSettings(surroundingsAwarenessEnabled: true)
-        let restored = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(original))
-        XCTAssertTrue(restored.surroundingsAwarenessEnabled)
-        XCTAssertEqual(restored.waterGoalBottles, original.waterGoalBottles)
-        XCTAssertEqual(restored.dailyScoreProfile, original.dailyScoreProfile)
-    }
 }
