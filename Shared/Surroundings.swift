@@ -41,8 +41,21 @@ struct SurroundingsSuggestion: Equatable, Sendable {
     }
 
     /// Optional examples from the user's area; no allergy or diet profile is inferred.
-    func foodPointers(in region: SurroundingsRegion) -> [String] {
-        let food = region.foods
+    func foodPointers(in region: SurroundingsRegion, on date: Date, calendar: Calendar = .current) -> [String] {
+        // Gregorian civil days in the user's time zone: stable across renders,
+        // refreshes and relaunches, including DST and year boundaries. Do not use
+        // hashValue (changes per process), random(), or the weather fetch time.
+        var localCalendar = Calendar(identifier: .gregorian)
+        localCalendar.timeZone = calendar.timeZone
+        let components = localCalendar.dateComponents([.era, .year, .month, .day], from: date)
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        // Normalize the local civil date to UTC before counting days. Counting
+        // elapsed seconds in the local zone would drift on 23/25-hour DST days.
+        let civilDate = utcCalendar.date(from: components) ?? date
+        let day = Int(floor(civilDate.timeIntervalSince1970 / 86_400))
+        let options = region.foodOptions
+        let food = options[(day % options.count + options.count) % options.count]
         switch kind {
         case .warm, .humid:
             return [
@@ -150,6 +163,84 @@ enum SurroundingsRegion: Equatable, Sendable {
         let homeMeal: String
         let protein: String
         let fruit: String
+    }
+
+    /// Four sets of actual foods per region, rather than four phrasings of
+    /// the same meal. Weather still chooses the suitable type of suggestion.
+    var foodOptions: [Foods] {
+        let alternatives: [Foods] = switch self {
+        case .southAsia:
+            [Foods(produce: "tomato or carrot", warmDish: "vegetable khichdi",
+                   homeMeal: "roti with chickpeas and spinach", protein: "chickpeas or curd", fruit: "orange or apple"),
+             Foods(produce: "cabbage or cucumber", warmDish: "sambar with vegetables",
+                   homeMeal: "idli with sambar and vegetables", protein: "lentils or eggs", fruit: "papaya or pomegranate"),
+             Foods(produce: "carrot or radish", warmDish: "a chickpea and vegetable stew",
+                   homeMeal: "rice with rajma and greens", protein: "rajma or tofu", fruit: "pear or melon")]
+        case .eastAsia:
+            [Foods(produce: "tomato or carrot", warmDish: "a tofu and mushroom soup",
+                   homeMeal: "rice with broccoli and egg", protein: "eggs or soybeans", fruit: "apple or kiwi"),
+             Foods(produce: "cabbage or radish", warmDish: "a vegetable noodle broth",
+                   homeMeal: "noodles with greens and edamame", protein: "tofu or chicken", fruit: "melon or grapes"),
+             Foods(produce: "lettuce or cucumber", warmDish: "a pumpkin and bean soup",
+                   homeMeal: "rice with mushrooms and fish", protein: "edamame or eggs", fruit: "orange or peach")]
+        case .southeastAsia:
+            [Foods(produce: "tomato or lettuce", warmDish: "a tofu and greens soup",
+                   homeMeal: "rice with tempeh and greens", protein: "tempeh or eggs", fruit: "mango or orange"),
+             Foods(produce: "carrot or cabbage", warmDish: "a pumpkin and lentil soup",
+                   homeMeal: "noodles with vegetables and tofu", protein: "beans or fish", fruit: "guava or melon"),
+             Foods(produce: "cucumber or radish", warmDish: "a fish and vegetable broth",
+                   homeMeal: "rice with egg and cabbage", protein: "tofu or lentils", fruit: "dragon fruit or pineapple")]
+        case .middleEastNorthAfrica:
+            [Foods(produce: "carrot or lettuce", warmDish: "a chickpea and vegetable stew",
+                   homeMeal: "couscous with chickpeas and carrots", protein: "beans or eggs", fruit: "apple or pear"),
+             Foods(produce: "cabbage or radish", warmDish: "a white bean soup",
+                   homeMeal: "bulgur with lentils and greens", protein: "lentils or yogurt", fruit: "grapes or melon"),
+             Foods(produce: "tomato or cucumber", warmDish: "a barley and vegetable soup",
+                   homeMeal: "flatbread with beans and salad", protein: "chickpeas or eggs", fruit: "mandarin or banana")]
+        case .europe:
+            [Foods(produce: "tomato or carrot", warmDish: "a lentil and carrot soup",
+                   homeMeal: "rice with beans and greens", protein: "lentils or tofu", fruit: "orange or berries"),
+             Foods(produce: "cabbage or radish", warmDish: "a mushroom and barley soup",
+                   homeMeal: "pasta with chickpeas and spinach", protein: "chickpeas or eggs", fruit: "banana or grapes"),
+             Foods(produce: "lettuce or cucumber", warmDish: "a pumpkin and lentil soup",
+                   homeMeal: "wholegrain toast with eggs and tomatoes", protein: "white beans or fish", fruit: "plum or kiwi")]
+        case .subSaharanAfrica:
+            [Foods(produce: "tomato or carrot", warmDish: "a lentil and pumpkin stew",
+                   homeMeal: "rice with lentils and greens", protein: "chickpeas or eggs", fruit: "orange or papaya"),
+             Foods(produce: "cabbage or cucumber", warmDish: "a bean and greens soup",
+                   homeMeal: "millet with beans and vegetables", protein: "beans or chicken", fruit: "guava or pineapple"),
+             Foods(produce: "lettuce or radish", warmDish: "a vegetable and chickpea stew",
+                   homeMeal: "sweet potato with eggs and greens", protein: "lentils or tofu", fruit: "apple or melon")]
+        case .northAmerica:
+            [Foods(produce: "tomato or carrot", warmDish: "a lentil and vegetable stew",
+                   homeMeal: "a bean and vegetable wrap", protein: "lentils or tofu", fruit: "orange or pear"),
+             Foods(produce: "cabbage or lettuce", warmDish: "a squash and chickpea soup",
+                   homeMeal: "rice with broccoli and tofu", protein: "chickpeas or fish", fruit: "banana or grapes"),
+             Foods(produce: "radish or cucumber", warmDish: "a barley and mushroom soup",
+                   homeMeal: "a baked sweet potato with beans and greens", protein: "eggs or edamame", fruit: "peach or kiwi")]
+        case .latinAmerica:
+            [Foods(produce: "tomato or carrot", warmDish: "a lentil and vegetable stew",
+                   homeMeal: "corn tortillas with eggs and greens", protein: "lentils or chicken", fruit: "orange or mango"),
+             Foods(produce: "cabbage or radish", warmDish: "a squash and chickpea soup",
+                   homeMeal: "rice with lentils and carrots", protein: "chickpeas or tofu", fruit: "guava or pineapple"),
+             Foods(produce: "lettuce or cucumber", warmDish: "a corn and vegetable soup",
+                   homeMeal: "sweet potato with beans and salad", protein: "black beans or eggs", fruit: "apple or melon")]
+        case .oceania:
+            [Foods(produce: "tomato or carrot", warmDish: "a lentil and pumpkin soup",
+                   homeMeal: "rice with tofu and greens", protein: "lentils or chicken", fruit: "pear or berries"),
+             Foods(produce: "cabbage or radish", warmDish: "a bean and barley stew",
+                   homeMeal: "a chickpea and vegetable wrap", protein: "chickpeas or eggs", fruit: "banana or kiwi"),
+             Foods(produce: "lettuce or cucumber", warmDish: "a mushroom and vegetable soup",
+                   homeMeal: "sweet potato with beans and spinach", protein: "tofu or fish", fruit: "peach or grapes")]
+        case .general:
+            [Foods(produce: "tomato or carrot", warmDish: "a lentil and vegetable stew",
+                   homeMeal: "rice with beans and greens", protein: "chickpeas or tofu", fruit: "apple or orange"),
+             Foods(produce: "cabbage or radish", warmDish: "a pumpkin and chickpea soup",
+                   homeMeal: "wholegrain bread with eggs and tomatoes", protein: "lentils or fish", fruit: "banana or pear"),
+             Foods(produce: "lettuce or cucumber", warmDish: "a barley and mushroom soup",
+                   homeMeal: "potatoes with lentils and spinach", protein: "beans or eggs", fruit: "melon or grapes")]
+        }
+        return [foods] + alternatives
     }
 
     var foods: Foods {

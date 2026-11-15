@@ -135,17 +135,22 @@ final class SurroundingsBonusPersistenceTests: XCTestCase {
     /// A pick must stay counted when a later weather check suggests different ideas,
     /// and a day can never exceed the food cap however many ideas are tried.
     @MainActor
-    func testPickSurvivesWeatherChangeAndIsCapped() async throws {
+    func testPickSurvivesWeatherChangeAndDailyRotationAndIsCapped() async throws {
         setAwareness(true)
         let container = try ModelContainer(for: DailyLog.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let context = ModelContext(container)
         let coordinator = DayCoordinator(context: context)
-        let warm = SurroundingsSuggestion(kind: .warm, title: "", detail: "").foodPointers(in: .southAsia)
-        let cool = SurroundingsSuggestion(kind: .cool, title: "", detail: "").foodPointers(in: .southAsia)
+        let now = Date()
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now)!
+        let warm = SurroundingsSuggestion(kind: .warm, title: "", detail: "").foodPointers(in: .southAsia, on: now)
+        let cool = SurroundingsSuggestion(kind: .cool, title: "", detail: "").foodPointers(in: .southAsia, on: now)
+        let rotated = SurroundingsSuggestion(kind: .warm, title: "", detail: "")
+            .foodPointers(in: .southAsia, on: tomorrow)
+        XCTAssertNotEqual(warm, rotated)
         let picked = try XCTUnwrap(warm.first)
         let claimed = await coordinator.claimSurroundingsFoodPick(idea: picked)
         XCTAssertTrue(claimed)
-        for idea in cool + warm {
+        for idea in rotated + cool + warm {
             _ = await coordinator.claimSurroundingsFoodPick(idea: idea)
         }
         let log = try XCTUnwrap(try context.fetch(FetchDescriptor<DailyLog>()).first)
